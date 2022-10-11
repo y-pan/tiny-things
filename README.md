@@ -1,3 +1,3 @@
 # tiny-things
 
-[Shuffle](/shuffle)
+[Shuffle](/tiny-things/shuffle)
