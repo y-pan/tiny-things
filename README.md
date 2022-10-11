@@ -1,1 +1,3 @@
 # tiny-things
+
+[Shuffle](/shuffle)
