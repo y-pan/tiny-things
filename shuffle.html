@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shuffle</title>
+  <style>
+    .root {
+      /* border: 1px solid blue; */
+      margin: auto;
+      width: 90%;
+      font-size: 5em;
+      font-family: Helvetica, sans-serif, Arial;
+    }
+
+    .countdown {
+      margin: 1em 0;
+    }
+
+    .control input {
+      font-size: 0.5em;
+      line-height: 3em;
+      width: 100%
+    }
+
+    .control label {
+      font-size: 0.5em;
+      font-weight: lighter;
+      font-style: italic;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div id="root" class="root">
+    <div id="countdown" class="countdown"></div>
+    <div id="list" class="list">Nothing to shuffle yet...</div>
+    <div id="control" class="control">
+      <label for="control-input">Items to shuffle(separated by ,): </label>
+      <input id="control-input" value="" onchange="onShuffleItemsInputChange(this.value)">
+    </div>
+  </div>
+  <script>
+    // const
+    const CONFIG = {
+      shuffles: 30,
+      interval: 30,
+      items: [],
+    };
+  </script>
+  <script>
+    // utils
+    function overrideConfigByURLSearchParams() {
+      const params = new URLSearchParams(window.location.search);
+      CONFIG.interval = Math.max(10, +(params.get("interval")) || CONFIG.interval);
+      CONFIG.shuffles = Math.max(10, +(params.get("shuffles")) || CONFIG.shuffles);
+      CONFIG.items = params.get("items")?.split(",") || [];
+    }
+
+    function shuffle(items) {
+      const copies = [...items];
+      const len = copies.length;
+      for (let i = 0; i < len; i++) {
+        let j = i + Math.floor(Math.random() * (len - i));
+        [copies[j], copies[i]] = [copies[i], copies[j]];
+      }
+      return copies;
+    }
+
+    function itemsToElements(items, tag = "div") {
+      return items.map((item, i) => {
+        const elem = document.createElement(tag);
+        elem.setAttribute("key", `item-${i}`);
+        elem.innerText = `${i + 1} - ${item}`;
+        return elem;
+      });
+    }
+
+    function shuffleAndDisplay() {
+      const namesShuffled = shuffle(CONFIG.items);
+      const newItemElements = itemsToElements(namesShuffled);
+      const listElem = document.getElementById("list");
+
+      listElem.innerHTML = "";
+
+      newItemElements.forEach(itemElem => {
+        listElem.appendChild(itemElem);
+      });
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function displayCountDown(num) {
+      const countdownElem = document.getElementById("countdown");
+      countdownElem.innerText = `Countdown: ${num}`;
+    }
+
+    async function main() {
+      overrideConfigByURLSearchParams();
+      console.log(CONFIG);
+      if (!CONFIG.items.length) {
+        return;
+      }
+      for (let i = 0; i < CONFIG.shuffles; i++) {
+        displayCountDown(CONFIG.shuffles - i - 1);
+        await sleep(CONFIG.interval);
+        shuffleAndDisplay();
+      }
+    }
+  </script>
+  <script>
+    // event handlers
+    function onShuffleItemsInputChange(inputValues) {
+
+      const cleanInput = String(inputValues?.trim());
+      if (!cleanInput) {
+        return;
+      }
+
+      const items = cleanInput.split(",").map(item => item.trim()).filter(item => item !== "") || [];
+      if (!items.length) {
+        return;
+      }
+      const newConfigURIEncoded = {
+        ...CONFIG,
+        items: items.map(item => encodeURIComponent(item))
+      };
+
+      // reload
+      const newSearchStr = `?items=${newConfigURIEncoded.items.join(",")}&shuffles=${newConfigURIEncoded.shuffles}&interval=${newConfigURIEncoded.interval}`;
+      const pathname = window.location.pathname;
+
+      window.location.replace(pathname + newSearchStr);
+    }
+  </script>
+  <script>
+    main();
+  </script>
+</body>
+
+</html>
