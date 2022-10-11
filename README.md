@@ -1,3 +1,3 @@
 # tiny-things
 
-[Shuffle](/tiny-things/shuffle)
+[Shuffle](https://y-pan.github.io/tiny-things/shuffle)
