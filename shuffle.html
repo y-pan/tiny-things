@@ -11,29 +11,60 @@
       /* border: 1px solid blue; */
       margin: auto;
       width: 90%;
-      font-size: 1.5em;
+      font-size: 1em;
       font-family: Helvetica, sans-serif, Arial;
     }
 
-    .list {
-      font-size: 3em;
+    #countdown {
+      margin: 2em;
+      font-size: 1em;
+      float: right;
     }
 
-    .countdown {
-      margin: 1em 0;
-      font-size: 1.5em;
+    #list {
+      font-size: 2em;
     }
 
-    .control input {
+    div#list,
+    div#control,
+    div#validation {
+      margin-top: 1em;
+      border: 1px solid #ccc;
+      padding: 1em;
+    }
+
+    #control input {
       font-size: 1em;
       line-height: 3em;
       width: 100%
     }
 
-    .control label {
+    #control label {
       font-size: 1em;
-      font-weight: lighter;
-      font-style: italic;
+      /* font-weight: lighter;
+      font-style: italic; */
+    }
+
+    .input-verify {
+      width: 90%;
+      /* line-height: 1em;
+      font-size: 1em; */
+    }
+
+    .label-verify {
+      margin-right: 0.5em;
+      width: 6em;
+    }
+
+    .validation-row {
+      margin-bottom: 0.5em;
+      display: flex;
+      vertical-align: middle;
+    }
+
+    #verify-result {
+      font-weight: bold;
+      margin-left: 1em;
     }
 
   </style>
@@ -41,12 +72,29 @@
 
 <body>
   <div id="root" class="root">
-    <div id="countdown" class="countdown"></div>
-    <div id="list" class="list"></div>
-    <div id="control" class="control">
+    <div id="countdown"></div>
+    <div id="list"></div>
+    <div id="control">
+      <h3>Input</h3>
       <label for="control-input">Enter items to shuffle(separated by ,): </label>
       <input id="control-input" value="" placeholder="rock, paper, scissors"
         onchange="onShuffleItemsInputChange(this.value)">
+    </div>
+    <div id="validation">
+      <h3>Verification</h3>
+      <div class="validation-row">
+        <label for="input-content" class="label-verify">Content:</label>
+        <textarea id="input-content" class="input-verify" value="" spellcheck="false"></textarea>
+      </div>
+      <div class="validation-row">
+        <label for="input-salt" class="label-verify" spellcheck="false">Time(Salt):</label>
+        <input id="input-salt" class="input-verify" value="" />
+      </div>
+      <div class="validation-row">
+        <label for="input-hash" class="label-verify">Checksum:</label>
+        <textarea id="input-hash" class="input-verify" value="" spellcheck="false"></textarea>
+      </div>
+      <button onclick="onVerify()">Verify Checksum</button><label id="verify-result"></label>
     </div>
   </div>
   <script>
@@ -85,9 +133,8 @@
       });
     }
 
-    function shuffleAndDisplay() {
-      const namesShuffled = shuffle(CONFIG.items);
-      const newItemElements = itemsToElements(namesShuffled);
+    function displayItems(items) {
+      const newItemElements = itemsToElements(items);
       const listElem = document.getElementById("list");
 
       listElem.innerHTML = "";
@@ -106,18 +153,50 @@
       countdownElem.innerText = `Countdown: ${num}`;
     }
 
+    async function hash(plainStr) {
+      const utf8 = new TextEncoder().encode(plainStr);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", utf8);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map((bytes) => bytes.toString(16).padStart(2, "0")).join("");
+      return hashHex;
+    }
+
+    async function hashWithSalt(plainStr, saltStr) {
+      return await hash(plainStr + "-" + saltStr);
+    }
+
+    async function verifyHash(plainStr, saltStr, hashValue) {
+      const hashValueFresh = await hashWithSalt(plainStr, saltStr);
+      const isMatch = hashValue === hashValueFresh;
+      return isMatch;
+    }
+
     async function main() {
       overrideConfigByURLSearchParams();
       console.log(CONFIG);
       if (!CONFIG.items.length) {
         return;
       }
+
+      let shuffledResult = [...CONFIG.items];
       for (let i = 0; i < CONFIG.shuffles; i++) {
         displayCountDown(CONFIG.shuffles - i - 1);
         await sleep(CONFIG.interval);
-        shuffleAndDisplay();
+        shuffledResult = shuffle(shuffledResult);
+        displayItems(shuffledResult);
       }
+
+      // compute salt hash
+      const content = shuffledResult.toString();
+      const dateIsoStrAsSalt = new Date().toISOString();
+      const hash = await hashWithSalt(content, dateIsoStrAsSalt);
+      console.log("###", content, dateIsoStrAsSalt, hash);
+      // display content, salt, hash
+      document.getElementById("input-content").value = content;
+      document.getElementById("input-salt").value = dateIsoStrAsSalt;
+      document.getElementById("input-hash").value = hash;
     }
+
   </script>
   <script>
     // event handlers
@@ -142,6 +221,18 @@
       const pathname = window.location.pathname;
 
       window.location.replace(pathname + newSearchStr);
+    }
+
+    async function onVerify() {
+      const content = document.getElementById("input-content").value;
+      const salt = document.getElementById("input-salt").value;
+      const hash = document.getElementById("input-hash").value;
+
+      const isMatch = await verifyHash(content, salt, hash);
+      const verifyResultDom = document.getElementById("verify-result");
+
+      verifyResultDom.innerText = isMatch ? "Valid - Content is credible!" : "Invalid - Content cannot be trusted!";
+      verifyResultDom.style.color = isMatch ? "#008700" : "#f00";
     }
   </script>
   <script>
