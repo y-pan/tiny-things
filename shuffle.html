@@ -24,7 +24,6 @@
     }
 
     #shuffle-display-stat {
-      margin-bottom: 0.5em;
       display: flex;
       justify-content: flex-end;
     }
@@ -32,11 +31,14 @@
     #shuffle-display-stat span {
       padding: 0.3em;
       margin-left: 0.3em;
-      border: 1px solid #ccc;
+      /* text-decoration: underline; */
+      font-style: italic;
+      /* border: 1px solid #ccc; */
     }
 
     #list {
-      font-size: 2em;
+      margin-left: 0.5em;
+      font-size: 1.5em;
     }
 
     #control input {
@@ -79,11 +81,12 @@
 <body>
   <div id="root" class="root">
     <div id="shuffle-display">
+      <h3>Shuffle</h3>
+      <div id="list"></div>
       <div id="shuffle-display-stat">
         <span id="shuffle-rounds"></span>
         <span id="countdown"></span>
       </div>
-      <div id="list"></div>
     </div>
 
     <div id="control">
@@ -165,7 +168,7 @@
       countdownElem.innerText = `Countdown: ${num}`;
 
       const shuffleRoundsElem = document.getElementById("shuffle-rounds");
-      shuffleRoundsElem.innerText = `Shuffles: ${CONFIG.shuffles}`;
+      shuffleRoundsElem.innerText = `Rounds: ${CONFIG.shuffles}`;
     }
 
     async function hash(plainStr) {
