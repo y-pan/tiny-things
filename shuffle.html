@@ -173,7 +173,6 @@
 
     async function main() {
       overrideConfigByURLSearchParams();
-      console.log(CONFIG);
       if (!CONFIG.items.length) {
         return;
       }
@@ -190,7 +189,6 @@
       const content = shuffledResult.toString();
       const dateIsoStrAsSalt = new Date().toISOString();
       const hash = await hashWithSalt(content, dateIsoStrAsSalt);
-      console.log("###", content, dateIsoStrAsSalt, hash);
       // display content, salt, hash
       document.getElementById("input-content").value = content;
       document.getElementById("input-salt").value = dateIsoStrAsSalt;
