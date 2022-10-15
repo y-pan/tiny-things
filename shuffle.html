@@ -23,17 +23,8 @@
       padding: 1em;
     }
 
-    #shuffle-display-stat {
-      display: flex;
-      justify-content: flex-end;
-    }
-
-    #shuffle-display-stat span {
-      padding: 0.3em;
-      margin-left: 0.3em;
-      /* text-decoration: underline; */
-      font-style: italic;
-      /* border: 1px solid #ccc; */
+    div#shuffle-display h3 span {
+      margin-right: 1em;
     }
 
     #list {
@@ -80,21 +71,18 @@
 
 <body>
   <div id="root" class="root">
-    <div id="shuffle-display">
-      <h3>Shuffle</h3>
-      <div id="list"></div>
-      <div id="shuffle-display-stat">
-        <span id="shuffle-rounds"></span>
-        <span id="countdown"></span>
-      </div>
-    </div>
 
     <div id="control">
-      <h3>Input</h3>
-      <label for="control-input">Enter items to shuffle (separated by ,): </label>
+      <h3><label for="control-input">Type in comma separated items, then hit Enter</label></h3>
       <input id="control-input" value="" placeholder="rock, paper, scissors"
-        onchange="onShuffleItemsInputChange(this.value)">
+        onkeypress="if (event.keyCode == 13) onShuffleItemsInputChange(this.value)">
     </div>
+
+    <div id="shuffle-display">
+      <h3><span id="shuffle-rounds"></span> <span id="countdown"></span></h3>
+      <div id="list"></div>
+    </div>
+
     <div id="validation">
       <h3>Verification</h3>
       <div class="validation-row">
@@ -168,7 +156,7 @@
       countdownElem.innerText = `Countdown: ${num}`;
 
       const shuffleRoundsElem = document.getElementById("shuffle-rounds");
-      shuffleRoundsElem.innerText = `Rounds: ${CONFIG.shuffles}`;
+      shuffleRoundsElem.innerText = `Total shuffles: ${CONFIG.shuffles}`;
     }
 
     async function hash(plainStr) {
@@ -194,6 +182,10 @@
       if (!CONFIG.items.length) {
         return;
       }
+
+      const controlInputElem = document.getElementById("control-input");
+      controlInputElem.value = CONFIG.items.toString();
+      // controlInputElem.setAttribute("readonly", "true");
 
       let shuffledResult = [...CONFIG.items];
       for (let i = 0; i < CONFIG.shuffles; i++) {
