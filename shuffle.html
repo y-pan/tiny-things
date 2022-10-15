@@ -15,22 +15,28 @@
       font-family: Helvetica, sans-serif, Arial;
     }
 
-    #countdown {
-      margin: 2em;
-      font-size: 1em;
-      float: right;
-    }
-
-    #list {
-      font-size: 2em;
-    }
-
-    div#list,
+    div#shuffle-display,
     div#control,
     div#validation {
       margin-top: 1em;
       border: 1px solid #ccc;
       padding: 1em;
+    }
+
+    #shuffle-display-stat {
+      margin-bottom: 0.5em;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    #shuffle-display-stat span {
+      padding: 0.3em;
+      margin-left: 0.3em;
+      border: 1px solid #ccc;
+    }
+
+    #list {
+      font-size: 2em;
     }
 
     #control input {
@@ -72,11 +78,17 @@
 
 <body>
   <div id="root" class="root">
-    <div id="countdown"></div>
-    <div id="list"></div>
+    <div id="shuffle-display">
+      <div id="shuffle-display-stat">
+        <span id="shuffle-rounds"></span>
+        <span id="countdown"></span>
+      </div>
+      <div id="list"></div>
+    </div>
+
     <div id="control">
       <h3>Input</h3>
-      <label for="control-input">Enter items to shuffle(separated by ,): </label>
+      <label for="control-input">Enter items to shuffle (separated by ,): </label>
       <input id="control-input" value="" placeholder="rock, paper, scissors"
         onchange="onShuffleItemsInputChange(this.value)">
     </div>
@@ -148,9 +160,12 @@
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    function displayCountDown(num) {
+    function displayStat(num) {
       const countdownElem = document.getElementById("countdown");
       countdownElem.innerText = `Countdown: ${num}`;
+
+      const shuffleRoundsElem = document.getElementById("shuffle-rounds");
+      shuffleRoundsElem.innerText = `Shuffles: ${CONFIG.shuffles}`;
     }
 
     async function hash(plainStr) {
@@ -179,7 +194,7 @@
 
       let shuffledResult = [...CONFIG.items];
       for (let i = 0; i < CONFIG.shuffles; i++) {
-        displayCountDown(CONFIG.shuffles - i - 1);
+        displayStat(CONFIG.shuffles - i - 1);
         await sleep(CONFIG.interval);
         shuffledResult = shuffle(shuffledResult);
         displayItems(shuffledResult);
@@ -193,6 +208,8 @@
       document.getElementById("input-content").value = content;
       document.getElementById("input-salt").value = dateIsoStrAsSalt;
       document.getElementById("input-hash").value = hash;
+
+      onVerify();
     }
 
   </script>
