@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lucky Shuffle</title>
+  <style>
+    .root {
+      /* border: 1px solid blue; */
+      margin: auto;
+      width: 90%;
+      font-size: 1em;
+      font-family: Helvetica, sans-serif, Arial;
+    }
+
+    div#shuffle-display,
+    div#control,
+    div#validation {
+      margin-top: 1em;
+      border: 1px solid #ccc;
+      padding: 1em;
+    }
+
+    div#shuffle-display h3 span {
+      margin-right: 1em;
+    }
+
+    #list {
+      margin-left: 0.5em;
+      font-size: 1.5em;
+    }
+
+    #control input {
+      font-size: 1em;
+      line-height: 3em;
+      width: 100%
+    }
+
+    #control label {
+      font-size: 1em;
+      /* font-weight: lighter;
+      font-style: italic; */
+    }
+
+    .input-verify {
+      width: 90%;
+      /* line-height: 1em;
+      font-size: 1em; */
+    }
+
+    .label-verify {
+      margin-right: 0.5em;
+      width: 6em;
+    }
+
+    .validation-row {
+      margin-bottom: 0.5em;
+      display: flex;
+      vertical-align: middle;
+    }
+
+    #verify-result {
+      font-weight: bold;
+      margin-left: 1em;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div id="root" class="root">
+
+    <div id="control">
+      <h3><label for="control-input">Type in comma separated items, then hit Enter</label></h3>
+      <input id="control-input" value="" placeholder="rock, paper, scissors"
+        onkeypress="if (event.keyCode == 13) onShuffleItemsInputChange(this.value)">
+    </div>
+
+    <div id="shuffle-display">
+      <h3><span id="difficulty-level"></span> <span id="tries"></span></h3>
+      <div id="list"></div>
+    </div>
+
+    <div id="validation">
+      <h3>Verification</h3>
+      <div class="validation-row">
+        <label for="input-content" class="label-verify">Content:</label>
+        <textarea id="input-content" class="input-verify" value="" spellcheck="false"></textarea>
+      </div>
+      <div class="validation-row">
+        <label for="input-salt" class="label-verify" spellcheck="false">Time(Salt):</label>
+        <input id="input-salt" class="input-verify" value="" />
+      </div>
+      <div class="validation-row">
+        <label for="input-hash" class="label-verify">Checksum:</label>
+        <textarea id="input-hash" class="input-verify" value="" spellcheck="false"></textarea>
+      </div>
+      <button onclick="onVerify()">Verify Checksum</button><label id="verify-result"></label>
+    </div>
+  </div>
+  <script>
+    // const
+    const CONFIG = {
+      difficulty: 1,
+      interval: 30,
+      items: [],
+    };
+  </script>
+  <script>
+    // utils
+    function overrideConfigByURLSearchParams() {
+      const params = new URLSearchParams(window.location.search);
+      CONFIG.interval = Math.max(10, +(params.get("interval")) || CONFIG.interval);
+      CONFIG.difficulty = Math.max(1, +(params.get("difficulty")) || CONFIG.difficulty);
+      CONFIG.items = params.get("items")?.split(",") || [];
+    }
+
+    function shuffle(items) {
+      const copies = [...items];
+      const len = copies.length;
+      for (let i = 0; i < len; i++) {
+        let j = i + Math.floor(Math.random() * (len - i));
+        [copies[j], copies[i]] = [copies[i], copies[j]];
+      }
+      return copies;
+    }
+
+    function itemsToElements(items, tag = "div") {
+      return items.map((item, i) => {
+        const elem = document.createElement(tag);
+        elem.setAttribute("key", `item-${i}`);
+        elem.innerText = `${i + 1} - ${item}`;
+        return elem;
+      });
+    }
+
+    function displayItems(items) {
+      const newItemElements = itemsToElements(items);
+      const listElem = document.getElementById("list");
+
+      listElem.innerHTML = "";
+
+      newItemElements.forEach(itemElem => {
+        listElem.appendChild(itemElem);
+      });
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function displayStat(num) {
+      const triesElem = document.getElementById("tries");
+      triesElem.innerText = `Tried: ${num}`;
+
+      const shuffleRoundsElem = document.getElementById("difficulty-level");
+      shuffleRoundsElem.innerText = `Difficulty level: ${CONFIG.difficulty}`;
+    }
+
+    async function hash(plainStr) {
+      const utf8 = new TextEncoder().encode(plainStr);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", utf8);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map((bytes) => bytes.toString(16).padStart(2, "0")).join("");
+      return hashHex;
+    }
+
+    async function hashWithSalt(plainStr, saltStr) {
+      return await hash(plainStr + "-" + saltStr);
+    }
+
+    async function verifyHash(plainStr, saltStr, hashValue) {
+      const hashValueFresh = await hashWithSalt(plainStr, saltStr);
+      const isMatch = hashValue === hashValueFresh;
+      return isMatch;
+    }
+
+    function getLuckyStart(num) {
+      num = Math.max(1, +num);
+      return Array(num).fill(0).join("");
+    }
+
+    // function toQueryParamsString(json={}) {
+    //   return Object.entries(json).map(([key, val]) => `${key}=${val}`).join("&");
+    // }
+
+    async function main() {
+      overrideConfigByURLSearchParams();
+      if (!CONFIG.items.length) {
+        return;
+      }
+
+      const controlInputElem = document.getElementById("control-input");
+      controlInputElem.value = CONFIG.items.toString();
+      // controlInputElem.setAttribute("readonly", "true");
+      let i = 0;
+      const luckyStart = getLuckyStart(CONFIG.difficulty);
+      let currentItems = [...CONFIG.items];
+      while (true) {
+        displayStat(++i);
+        await sleep(CONFIG.interval);
+        currentItems = shuffle(currentItems);
+        // 
+        const content = currentItems.toString();
+        const dateIsoStrAsSalt = new Date().toISOString();
+        const hash = await hashWithSalt(content, dateIsoStrAsSalt);
+
+        displayItems(currentItems);
+
+        // display content, salt, hash
+        document.getElementById("input-content").value = content;
+        document.getElementById("input-salt").value = dateIsoStrAsSalt;
+        document.getElementById("input-hash").value = hash;
+
+        if (hash.startsWith(luckyStart)) {
+          break;
+        }
+      }
+      onVerify();
+    }
+
+  </script>
+  <script>
+    // event handlers
+    function onShuffleItemsInputChange(inputValues) {
+
+      const cleanInput = String(inputValues?.trim());
+      if (!cleanInput) {
+        return;
+      }
+
+      const items = cleanInput.split(",").map(item => item.trim()).filter(item => item !== "") || [];
+      if (!items.length) {
+        return;
+      }
+      const newConfigURIEncoded = {
+        ...CONFIG,
+        items: items.map(item => encodeURIComponent(item))
+      };
+
+      // reload
+      const newSearchStr = `?items=${newConfigURIEncoded.items.join(",")}&difficulty=${newConfigURIEncoded.difficulty}&interval=${newConfigURIEncoded.interval}`;
+      const pathname = window.location.pathname;
+
+      window.location.replace(pathname + newSearchStr);
+    }
+
+    async function onVerify() {
+      const content = document.getElementById("input-content").value;
+      const salt = document.getElementById("input-salt").value;
+      const hash = document.getElementById("input-hash").value;
+
+      const isMatch = await verifyHash(content, salt, hash);
+      const verifyResultDom = document.getElementById("verify-result");
+
+      verifyResultDom.innerText = isMatch ? "Valid - Content is credible!" : "Invalid - Content cannot be trusted!";
+      verifyResultDom.style.color = isMatch ? "#008700" : "#f00";
+    }
+  </script>
+  <script>
+    main();
+  </script>
+</body>
+
+</html>
