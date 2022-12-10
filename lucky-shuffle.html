@@ -75,7 +75,7 @@
     <div id="control">
       <h3><label for="control-input">Type in comma separated items, then hit Enter</label></h3>
       <input id="control-input" value="" placeholder="rock, paper, scissors"
-        onkeypress="if (event.keyCode == 13) onShuffleItemsInputChange(this.value)">
+        onkeydown="if (event.keyCode == 13) onShuffleItemsInputChange(this.value)">
     </div>
 
     <div id="shuffle-display">
