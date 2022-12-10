@@ -32,16 +32,44 @@
       font-size: 1.5em;
     }
 
+    #control-input-container {
+      display: flex;
+    }
+
+    @media screen and (max-width: 500px) {
+      #control-input-container {
+        flex-direction: column;
+      }
+
+      #control input {
+        font-size: 1em;
+        line-height: 3em;
+        /* width: 100%; */
+        padding: 0;
+      }
+
+      #control button {
+        margin-left: 0 !important;
+        margin-top: 1em;
+        width: 100%;
+      }
+    }
+
     #control input {
       font-size: 1em;
       line-height: 3em;
-      width: 100%
+      flex-grow: 1;
     }
 
     #control label {
       font-size: 1em;
       /* font-weight: lighter;
       font-style: italic; */
+    }
+
+    #control button {
+      margin-left: 1em;
+      padding: 15px;
     }
 
     .input-verify {
@@ -74,8 +102,11 @@
 
     <div id="control">
       <h3><label for="control-input">Type in comma separated items, then hit Enter</label></h3>
-      <input id="control-input" value="" placeholder="rock, paper, scissors"
-        onkeydown="if (event.keyCode == 13) onShuffleItemsInputChange(this.value)">
+      <div id="control-input-container">
+        <input id="control-input" value="" placeholder="rock, paper, scissors"
+          onkeydown="if (event.keyCode == 13) onShuffleItemsInputChange(this.value)">
+        <button onclick="onShuffleItems()">Go</button>
+      </div>
     </div>
 
     <div id="shuffle-display">
@@ -224,6 +255,11 @@
   </script>
   <script>
     // event handlers
+    function onShuffleItems() {
+      const inputElem = document.getElementById("control-input");
+      onShuffleItemsInputChange(inputElem.value);
+    }
+
     function onShuffleItemsInputChange(inputValues) {
 
       const cleanInput = String(inputValues?.trim());
