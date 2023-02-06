@@ -44,6 +44,7 @@
   }
 
   function gridOfNewlineSeparatedSingleStr(newLineSeparatedSingleStr, lifeSymbol = "O") {
+    // More generations setting: https://conwaylife.com/ref/lexicon/lex_g.htm
     // OO..O
     // O...O
     // O..OO
@@ -122,6 +123,22 @@ O..OO
     return gridExpand(grid, config.numRows, config.numCols);
   }
 
+  function seedGlidersGospersGun(config) {
+    const grid = gridOfNewlineSeparatedSingleStr(
+      `	........................O...........
+	......................O.O...........
+	............OO......OO............OO
+	...........O...O....OO............OO
+	OO........O.....O...OO..............
+	OO........O...O.OO....O.O...........
+	..........O.....O.......O...........
+	...........O...O....................
+	............OO......................
+`, "O"
+    )
+    return gridExpand(grid, config.numRows, config.numCols);
+  }
+
   function seedGridersBlockCycle(config) {
     const grid = gridOfNewlineSeparatedSingleStr(
       `
@@ -142,6 +159,7 @@ O..OO
     grid = seedRandom(config.numRows, config.numCols, config.randomLifeThreshold);
     // grid = seedGlidersByTheDozen(config);
     // grid = seedGridersBlockCycle(config);
+    // grid = seedGlidersGospersGun(config);
 
     return grid;
   }
