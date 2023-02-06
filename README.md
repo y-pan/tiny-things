@@ -5,3 +5,5 @@
 2. [Shuffle](https://y-pan.github.io/tiny-things/shuffle?items=Sun,Mercury,Venus,Earth,Mars,Jupiter,Saturn,Uranus,Neptune&shuffles=30&interval=40)
 
 3. [Generate Password](https://y-pan.github.io/tiny-things/password?length=14)
+
+4. [Generate Password](https://y-pan.github.io/tiny-things/game-of-life)

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Of Life</title>
+</head>
+
+<body onload="start()">
+  <div>
+    <h3>Conway's Game of Life</h3>
+    <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Wikipedia Reference</a>
+  </div>
+  <br>
+  <div id="stats">
+    <div>Generations: <span id="generationCount"></span></div>
+    <div id="gameOver"></div>
+  </div>
+  <canvas id="canvas"></canvas>
+</body>
+
+<script>
+  // constants
+  const LIFE = 1;
+  const DEATH = 0;
+</script>
+
+<script>
+  // only pure util functions
+  function zeros(numRows, numCols) {
+    return Array(numRows).fill(0).map(rv => Array(numCols).fill(0).map(cv => 0));
+  }
+
+  function gridClone(inputGrid) {
+    const clone = zeros(inputGrid.length, inputGrid[0].length);
+    for (let r = 0; r < inputGrid.length; r++) {
+      for (let c = 0; c < inputGrid[0].length; c++) {
+        clone[r][c] = inputGrid[r][c];
+      }
+    }
+    return clone;
+  }
+
+  function randomized(inputGrid) {
+    for (let r = 0; r < inputGrid.length; r++) {
+      for (let c = 0; c < inputGrid[0].length; c++) {
+        inputGrid[r][c] = Math.random() > 0.7 ? LIFE : DEATH;
+      }
+    }
+  }
+
+  function seedRandom(R, C) {
+    const grid = zeros(R, C);
+    randomized(grid);
+    return grid;
+  }
+
+  function seedOscillatorBlinker(R, C) {
+    //https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life
+    const grid = zeros(R, C);
+    let r0 = Math.floor(R / 2);
+    let c0 = Math.floor(C / 2);
+
+    grid[Math.max(0, r0 - 1)][Math.max(1, c0)] = 1;
+    grid[Math.max(0, r0)][c0] = 1;
+    grid[Math.max(0, r0 + 1)][c0] = 1;
+    return grid;
+  }
+
+  function seedOscillatorToad(R, C) {
+    //https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life
+    const grid = zeros(R, C);
+    let r0 = Math.floor(R / 2);
+    let c0 = Math.floor(C / 2);
+
+    grid[Math.max(0, r0 - 1)][Math.max(1, c0)] = 1;
+    grid[Math.max(0, r0)][c0] = 1;
+    grid[Math.max(0, r0 + 1)][c0] = 1;
+    return grid;
+  }
+
+  function seed(R, C) {
+    const firstGeneration = seedRandom(R, C);
+    console.log("FirstGeneration: ", JSON.stringify(firstGeneration));
+    return firstGeneration;
+  }
+
+  function lifeOrDeath(r, c, inputGrid) {
+    // Any live cell with two or three live neighbours survives.
+    // Any dead cell with three live neighbours becomes a live cell.
+    // All other live cells die in the next generation. Similarly, all other dead cells stay dead.
+    let liveNeighbours = 0;
+
+    liveNeighbours += (r - 1 >= 0 && inputGrid[r - 1][c] == LIFE) ? 1 : 0;
+    liveNeighbours += (r + 1 < inputGrid.length && inputGrid[r + 1][c] == LIFE) ? 1 : 0;
+    liveNeighbours += (c - 1 >= 0 && inputGrid[r][c - 1] == LIFE) ? 1 : 0;
+    liveNeighbours += (c + 1 < inputGrid[0].length && inputGrid[r][c + 1] == LIFE) ? 1 : 0;
+
+    liveNeighbours += (r - 1 >= 0 && c - 1 >= 0 && inputGrid[r - 1][c - 1] == LIFE) ? 1 : 0;
+    liveNeighbours += (r - 1 >= 0 && c + 1 < inputGrid[0].length && inputGrid[r - 1][c + 1] == LIFE) ? 1 : 0;
+    liveNeighbours += (r + 1 < inputGrid.length && c - 1 >= 0 && inputGrid[r + 1][c - 1] == LIFE) ? 1 : 0;
+    liveNeighbours += (r + 1 < inputGrid.length && c + 1 < inputGrid[0].length && inputGrid[r + 1][c + 1] == LIFE) ? 1 : 0;
+
+    if (inputGrid[r][c] == LIFE && (liveNeighbours == 2 || liveNeighbours == 3)) {
+      return LIFE;
+    }
+    if (inputGrid[r][c] == DEATH && liveNeighbours == 3) {
+      return LIFE;
+    }
+    return DEATH;
+  }
+
+  function nextGeneration(inputGrid) {
+    const oldGen = gridClone(inputGrid);
+    let hasLife = false;
+    // in-place update grid as next generation
+    for (let r = 0; r < inputGrid.length; r++) {
+      for (let c = 0; c < inputGrid[0].length; c++) {
+        inputGrid[r][c] = lifeOrDeath(r, c, oldGen);
+
+        if (inputGrid[r][c] == LIFE) {
+          hasLife = true;
+        }
+      }
+    }
+    return hasLife;
+  }
+
+</script>
+
+<script>
+  function setupCanvas(inputConfig) {
+    canvas = document.getElementById("canvas");
+    canvas.width = inputConfig.canvasWidth;
+    canvas.height = inputConfig.canvasHeight;
+    canvas.style.border = "1px solid #000";
+    return canvas;
+  }
+
+  function drawGridToCanvas(canvasElem, inputConfig, _grid) {
+    const context = canvasElem.getContext("2d");
+
+    context.clearRect(0, 0, canvasElem.width, canvasElem.height);
+
+    // Workaround to avoid blurry rectangle border
+    context.strokeRect1 = function (x, y, w, h) {
+      x = parseInt(x) + 0.50;
+      y = parseInt(y) + 0.50;
+      this.strokeRect(x, y, w, h);
+    }
+    context.fillRect1 = function (x, y, w, h) {
+      x = parseInt(x);
+      y = parseInt(y);
+      context.fillRect(x, y, w, h);
+    }
+
+    context.strokeStyle = inputConfig.cellBorderStyle;
+    context.fillStyle = inputConfig.cellFillStyle;
+
+    // draw grid
+    for (let r = 0; r < _grid.length; r++) {
+      for (let c = 0; c < _grid[0].length; c++) {
+        let x = inputConfig.cellWidth * c;
+        let y = inputConfig.cellHeight * r;
+        if (_grid[r][c] == LIFE) {
+          // life, fill it
+          context.fillRect1(x, y, inputConfig.cellWidth, inputConfig.cellHeight);
+        }
+        context.strokeRect1(x, y, inputConfig.cellWidth, inputConfig.cellHeight);
+      }
+    }
+  }
+
+  function updateStats(generationCount) {
+    const generationCountElem = document.getElementById("generationCount");
+    if (generationCountElem) {
+      generationCountElem.innerText = generationCount;
+    }
+  }
+
+  function showGameOver() {
+    const gameOverElem = document.getElementById("gameOver");
+    if (gameOverElem) {
+      gameOverElem.innerText = "Game Over!";
+    }
+  }
+
+  function start() {
+    console.log("start...");
+    const grid = seed(100, 100);
+
+    const config = {
+      canvasWidth: 800,
+      canvasHeight: 800,
+      cellBorderStyle: "#ccc",
+      cellFillStyle: "#066", // LIFE cell fill color
+    }
+
+    config.cellWidth = Math.floor(config.canvasWidth / grid[0].length);
+    config.cellHeight = Math.floor(config.canvasHeight / grid.length);
+
+    const canvas = setupCanvas(config);
+
+    let generationCount = 0;
+    drawGridToCanvas(canvas, config, grid);
+    updateStats(generationCount);
+
+    let interval = setInterval(() => {
+      const hasLife = nextGeneration(grid);
+      updateStats(++generationCount);
+
+      drawGridToCanvas(canvas, config, grid);
+
+      if (!hasLife) {
+        clearInterval(interval);
+        showGameOver();
+      }
+    }, 1000);
+  }
+</script>
+
+</html>
