@@ -6,4 +6,4 @@
 
 3. [Generate Password](https://y-pan.github.io/tiny-things/password?length=14)
 
-4. [Generate Password](https://y-pan.github.io/tiny-things/game-of-life)
+4. [Conway's Game of Life](https://y-pan.github.io/tiny-things/game-of-life)
