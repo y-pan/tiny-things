@@ -43,6 +43,37 @@
     return clone;
   }
 
+  function gridOfNewlineSeparatedSingleStr(newLineSeparatedSingleStr, lifeSymbol = "O") {
+    // OO..O
+    // O...O
+    // O..OO
+    const grid = String(newLineSeparatedSingleStr).split("\n").map(rowStr => rowStr.trim()).filter(Boolean)
+      .map(rowStr => rowStr.split("").map(c => c === lifeSymbol ? LIFE : DEATH));
+
+    for (let r = 0; r < grid.length; r++) {
+      if (r - 1 >= 0 && grid[r].length != grid[r - 1].length) {
+        alert("Input format is not recognized - inconsistent row size");
+        return [[]];
+      }
+    }
+    return grid;
+  }
+
+  function gridExpand(grid, desiredRows, desiredCols) {
+    let R = grid.length;
+    let C = grid[0].length;
+    let largeGrid = zeros(desiredRows, desiredCols);
+
+    let r0 = Math.floor((desiredRows - R) / 2);
+    let c0 = Math.floor((desiredCols - C) / 2);
+    for (let r = r0; r < r0 + grid.length; r++) {
+      for (let c = c0; c < c0 + grid[0].length; c++) {
+        largeGrid[r][c] = grid[r - r0][c - c0];
+      }
+    }
+    return largeGrid;
+  }
+
   function randomized(grid, randomLifeThreshold) {
     for (let r = 0; r < grid.length; r++) {
       for (let c = 0; c < grid[0].length; c++) {
@@ -79,8 +110,40 @@
     return grid;
   }
 
+  function seedGlidersByTheDozen(config) {
+    const grid = gridOfNewlineSeparatedSingleStr(
+      `
+OO..O
+O...O
+O..OO
+`, "O"
+    );
+
+    return gridExpand(grid, config.numRows, config.numCols);
+  }
+
+  function seedGridersBlockCycle(config) {
+    const grid = gridOfNewlineSeparatedSingleStr(
+      `
+  ...OO...
+	...OO...
+	........
+	........
+	..O..O..
+	O.O..O.O
+	.OO..OO.`, "O"
+    );
+    return gridExpand(grid, config.numRows, config.numCols);
+  }
+
   function seed(config) {// the global CONFIG
-    return seedRandom(config.numRows, config.numCols, config.randomLifeThreshold);
+    let grid;
+
+    grid = seedRandom(config.numRows, config.numCols, config.randomLifeThreshold);
+    // grid = seedGlidersByTheDozen(config);
+    // grid = seedGridersBlockCycle(config);
+
+    return grid;
   }
 
   function lifeOrDeath(r, c, grid) {
@@ -194,7 +257,7 @@
       randomLifeThreshold: 0.7,
       cellBorderStyle: "#ccc",
       cellFillStyle: "#066", // LIFE cell fill color
-      lifeSpanMilliSeconds: 1000,
+      lifeSpanMilliSeconds: 200,
     }
 
     CONFIG.cellWidth = Math.floor(CONFIG.canvasWidth / CONFIG.numCols);
