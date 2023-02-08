@@ -25,6 +25,8 @@
   // constants
   const LIFE = 1;
   const DEATH = 0;
+  const LIFE_SYMBOL = "O"; // non-digit
+  const DEATH_SYMBOL = ".";// non-digit
 </script>
 
 <script>
@@ -43,7 +45,94 @@
     return clone;
   }
 
-  function gridOfNewlineSeparatedSingleStr(newLineSeparatedSingleStr, lifeSymbol = "O") {
+  function digitsArrayToCompactString(arrayOfZerosAndOnes) {
+    let counter = []; //example: [ ["0", 2], ["1", ]
+    for (let num of arrayOfZerosAndOnes) {
+      if (counter.length === 0 || counter[counter.length - 1][0] !== num) {
+        counter.push([num, 1]);
+      } else {
+        counter[counter.length - 1][1] += 1;
+      }
+    }
+
+    return counter.map(([num, count]) => {
+      if (num === LIFE) {
+        return `${LIFE_SYMBOL}${count}`;
+      }
+      return `${DEATH_SYMBOL}${count}`;
+    })
+      .reduce((prev, curSymbolCountStr) => prev + curSymbolCountStr, "");
+  }
+
+  function compactStringToDigitsArray(str) {
+    // str like: '.5O3.2', <symbol><number><symbol><number>
+    str = str ? str.trim() : "";
+    if (!str) {
+      return [];
+    }
+    let arr = [];
+    let l = 0;
+    const digits = "01234567890";
+
+    for (let r = 0; r < str.length; r++) {
+      if (l === r || digits.includes(str[r])) {
+        continue;
+      }
+
+      // has symbol, now we see another symbol, collect current <symbol><number>, where l is at symbo
+      let symbol = str[l];
+      let num = Number.parseInt(str.substring(l + 1, r));
+      if (Number.isNaN(num)) {
+        console.error("Bad format: ", str)
+        return []
+      }
+
+      arr = arr.concat(Array(num).fill(symbol === LIFE_SYMBOL ? LIFE : DEATH));
+      l = r;
+    }
+
+    let symbol = str[l];
+    let num = Number.parseInt(str.substring(l + 1));
+    if (!Number.isNaN(num)) {
+      arr = arr.concat(Array(num).fill(symbol === LIFE_SYMBOL ? LIFE : DEATH));
+    }
+    return arr;
+  }
+
+  (function test() {
+    const arr1 = [0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0];
+    const arr1Str = '.5O3.1O2.1O1.2';
+    console.assert(arr1Str === digitsArrayToCompactString(arr1));
+
+    const arr1b = compactStringToDigitsArray(arr1Str);
+    for (let i = 0; i < arr1b.length; i++) {
+      console.assert(arr1b[i] === arr1[i]);
+    }
+
+    const grid1 = [[1, 1, 0], [0, 1, 0]];;
+    const grid1Str = 'O2.1_.1O1.1';
+    if (grid1Str !== gridToCompactString(grid1)) throw new Error("Test");
+    const grid1b = compactStringToGrid(grid1Str);
+    for (let r = 0; r < grid1.length; r++) {
+      for (let c = 0; c < grid1[0].length; c++) {
+        console.assert(grid1b[r][c] === grid1[r][c]);
+      }
+    }
+  })();
+
+  function gridToCompactString(grid) {
+    return grid.map(digitArray => digitsArrayToCompactString(digitArray))
+      .join("_");
+  }
+
+  function compactStringToGrid(str) {
+    if (!str) {
+      return undefined;
+    }
+    return str.split("_").map(compactStringToDigitsArray);
+  }
+
+  function gridOfNewlineSeparatedSingleStr(newLineSeparatedSingleStr, lifeSymbol = LIFE_SYMBOL) {
     // More generations setting: https://conwaylife.com/ref/lexicon/lex_g.htm
     // OO..O
     // O...O
@@ -153,12 +242,13 @@ O..OO
     return gridExpand(grid, config.numRows, config.numCols);
   }
 
-  function seedWithNewlineSeparatedSingleStr(config, inputStr, lifeSymbol = "O") {
+  function seedWithNewlineSeparatedSingleStr(config, inputStr, lifeSymbol = LIFE_SYMBOL) {
     const grid = gridOfNewlineSeparatedSingleStr(inputStr,);
     return gridExpand(grid, config.numRows, config.numCols);
   }
 
   function seed(config) {// the global CONFIG
+    console.log("seeding...");
     let grid;
 
     // grid = seedRandom(config.numRows, config.numCols, config.randomLifeThreshold);
@@ -271,12 +361,18 @@ O..OO
 
   function start() {
     console.log("Start...");
-    const factor = 1.2;
+    const params = new URLSearchParams(window.location.search);
+
+    const gridFromParam = compactStringToGrid(params.get("grid"))
+    console.log(gridFromParam.length, gridFromParam[0].length);
+
+    const factor = Math.max(Number.parseFloat(params.get("factor") || 1), 1);
+
     const CONFIG = {
       canvasWidth: 800 * factor,
       canvasHeight: 800 * factor,
-      numRows: 100 * factor,
-      numCols: 100 * factor,
+      numRows: Math.max(100 * factor, gridFromParam ? gridFromParam.length : 10),
+      numCols: Math.max(100 * factor, gridFromParam && gridFromParam[0] ? gridFromParam[0].length : 10),
       randomLifeThreshold: 0.7,
       cellBorderStyle: "#ccc",
       cellFillStyle: "#066", // LIFE cell fill color
@@ -286,10 +382,11 @@ O..OO
     CONFIG.cellWidth = Math.floor(CONFIG.canvasWidth / CONFIG.numCols);
     CONFIG.cellHeight = Math.floor(CONFIG.canvasHeight / CONFIG.numRows);
 
-    console.log("CONFIG: ", CONFIG);
 
-    const GRID = seed(CONFIG);
-    console.log("First Generation: ", GRID);
+    const GRID = gridFromParam ? gridExpand(gridFromParam, CONFIG.numRows, CONFIG.numCols) : seed(CONFIG);
+    console.log("CONFIG: ", CONFIG);
+    console.log("First Generation: ");
+    console.log(gridToCompactString(GRID));
 
     const canvas = setupCanvas(CONFIG);
 
