@@ -153,13 +153,18 @@ O..OO
     return gridExpand(grid, config.numRows, config.numCols);
   }
 
+  function seedWithNewlineSeparatedSingleStr(config, inputStr, lifeSymbol = "O") {
+    const grid = gridOfNewlineSeparatedSingleStr(inputStr,);
+    return gridExpand(grid, config.numRows, config.numCols);
+  }
+
   function seed(config) {// the global CONFIG
     let grid;
 
-    grid = seedRandom(config.numRows, config.numCols, config.randomLifeThreshold);
+    // grid = seedRandom(config.numRows, config.numCols, config.randomLifeThreshold);
     // grid = seedGlidersByTheDozen(config);
     // grid = seedGridersBlockCycle(config);
-    // grid = seedGlidersGospersGun(config);
+    grid = seedGlidersGospersGun(config);
 
     return grid;
   }
@@ -266,12 +271,12 @@ O..OO
 
   function start() {
     console.log("Start...");
-
+    const factor = 1.2;
     const CONFIG = {
-      canvasWidth: 800,
-      canvasHeight: 800,
-      numRows: 100,
-      numCols: 100,
+      canvasWidth: 800 * factor,
+      canvasHeight: 800 * factor,
+      numRows: 100 * factor,
+      numCols: 100 * factor,
       randomLifeThreshold: 0.7,
       cellBorderStyle: "#ccc",
       cellFillStyle: "#066", // LIFE cell fill color
