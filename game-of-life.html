@@ -364,7 +364,6 @@ O..OO
     const params = new URLSearchParams(window.location.search);
 
     const gridFromParam = compactStringToGrid(params.get("grid"))
-    console.log(gridFromParam.length, gridFromParam[0].length);
 
     const factor = Math.max(Number.parseFloat(params.get("factor") || 1), 1);
 
