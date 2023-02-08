@@ -248,13 +248,13 @@ O..OO
   }
 
   function seed(config) {// the global CONFIG
-    console.log("seeding...");
+    console.log("Seeding with default");
     let grid;
 
-    // grid = seedRandom(config.numRows, config.numCols, config.randomLifeThreshold);
+    grid = seedRandom(config.numRows, config.numCols, config.randomLifeThreshold);
     // grid = seedGlidersByTheDozen(config);
     // grid = seedGridersBlockCycle(config);
-    grid = seedGlidersGospersGun(config);
+    // grid = seedGlidersGospersGun(config);
 
     return grid;
   }
