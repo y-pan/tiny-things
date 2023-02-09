@@ -6,9 +6,10 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Game Of Life</title>
+  <style></style>
 </head>
 
-<body onload="start()">
+<body onload="onload()">
   <div>
     <h3>Conway's Game of Life</h3>
     <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Wikipedia Reference</a>
@@ -16,8 +17,11 @@
   <br>
   <div id="stats">
     <div>Generations: <span id="generationCount"></span></div>
+    <button id="btn-start-stop" onclick="onStartStop(this)">Stop</button>
+    <button id="btn-build-from-here" onclick="onBuildFromHere(this)">Build From Here</button>
     <div id="gameOver"></div>
   </div>
+  <br>
   <canvas id="canvas"></canvas>
 </body>
 
@@ -27,6 +31,13 @@
   const DEATH = 0;
   const LIFE_SYMBOL = "O"; // non-digit
   const DEATH_SYMBOL = ".";// non-digit
+
+  // variables
+  let CONFIG;
+  let GRID;
+  let gameInterval;
+  let isStopped = false;
+  let generationCount = 0;
 </script>
 
 <script>
@@ -428,19 +439,47 @@ O..OO
     }
   }
 
-  function start() {
+  function run() {
+    gameInterval = setInterval(() => {
+      if (!isStopped) {
+        const hasLife = nextGeneration(GRID);
+        updateStats(++generationCount);
+
+        drawGridToCanvas(canvas, CONFIG, GRID);
+        if (!hasLife) {
+          clearInterval(gameInterval);
+          showGameOver();
+        }
+      }
+
+    }, CONFIG.lifeSpanMilliSeconds);
+  }
+
+  function onStartStop(buttonElem) {
+    isStopped = !isStopped;
+    buttonElem.innerText = isStopped ? "Start" : "Stop";
+  }
+
+  function onBuildFromHere() {
+    let gridStr = gridToCompactString(gridTrim(gridClone(GRID)));
+    console.log("Current grid: ", gridStr)
+    window.open(`https://y-pan.github.io/tiny-things/game-of-life-builder.html?factor=${CONFIG.factor}&grid=${gridStr}`, "_blank");
+  }
+
+  function onload() {
     console.log("Start...");
     const params = new URLSearchParams(window.location.search);
 
     const gridFromParam = compactStringToGrid(params.get("grid"))
 
-    const factor = Math.max(Number.parseFloat(params.get("factor") || 1), 1);
+    const factor = maxNumber(Number.parseFloat(params.get("factor")), 1);
 
-    const CONFIG = {
+    CONFIG = {
+      factor: factor,
       canvasWidth: 800 * factor,
       canvasHeight: 800 * factor,
-      numRows: Math.max(100 * factor, gridFromParam ? gridFromParam.length : 10),
-      numCols: Math.max(100 * factor, gridFromParam && gridFromParam[0] ? gridFromParam[0].length : 10),
+      numRows: maxNumber(10, 100 * factor, gridFromParam?.length),
+      numCols: maxNumber(10, 100 * factor, gridFromParam && gridFromParam[0] && gridFromParam[0].length),
       randomLifeThreshold: 0.7,
       cellBorderStyle: "#ccc",
       cellFillStyle: "#066", // LIFE cell fill color
@@ -451,27 +490,18 @@ O..OO
     CONFIG.cellHeight = Math.floor(CONFIG.canvasHeight / CONFIG.numRows);
 
 
-    const GRID = gridFromParam ? gridExpand(gridFromParam, CONFIG.numRows, CONFIG.numCols) : seed(CONFIG);
+    GRID = gridFromParam ? gridExpand(gridFromParam, CONFIG.numRows, CONFIG.numCols) : seed(CONFIG);
     console.log("CONFIG: ", CONFIG);
     console.log("First Generation: ");
     console.log(gridToCompactString(GRID));
 
     const canvas = setupCanvas(CONFIG);
 
-    let generationCount = 0;
+    generationCount = 0;
     drawGridToCanvas(canvas, CONFIG, GRID);
     updateStats(generationCount);
 
-    let interval = setInterval(() => {
-      const hasLife = nextGeneration(GRID);
-      updateStats(++generationCount);
-
-      drawGridToCanvas(canvas, CONFIG, GRID);
-      if (!hasLife) {
-        clearInterval(interval);
-        showGameOver();
-      }
-    }, CONFIG.lifeSpanMilliSeconds);
+    run();
   }
 </script>
 
