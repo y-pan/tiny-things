@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Of Life</title>
+</head>
+
+<body onload="start()">
+  <div>
+    <h3>Conway's Game of Life Builder</h3>
+    <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Wikipedia Reference</a>
+  </div>
+  <br>
+  <button onclick="onPlay()">Play</button>
+  <br>
+  <br>
+  <canvas id="canvas"></canvas>
+</body>
+
+<script>
+  // constants
+  const LIFE = 1;
+  const DEATH = 0;
+  const LIFE_SYMBOL = "O"; // non-digit
+  const DEATH_SYMBOL = ".";// non-digit
+  // global var
+  let CANVAS;
+  let CONFIG;
+  let GRID;
+  let isMouseDownOnCanvas = false;
+  let isErasing = false;
+</script>
+
+<script>
+  // only pure util functions
+  function maxNumber(...numbers) {
+    let m = Number.NEGATIVE_INFINITY;
+    for (let num of numbers) {
+      if (typeof num === "number" && Number.isFinite(num)) {
+        m = Math.max(m, num);
+      }
+    }
+    return m;
+  }
+
+  function zeros(numRows, numCols) {
+    return Array(numRows).fill(0).map(rv => Array(numCols).fill(0).map(cv => 0));
+  }
+
+  function gridExpand(grid, desiredRows, desiredCols) {
+    let R = grid.length;
+    let C = grid[0].length;
+    let largeGrid = zeros(desiredRows, desiredCols);
+
+    let r0 = Math.floor((desiredRows - R) / 2);
+    let c0 = Math.floor((desiredCols - C) / 2);
+    for (let r = r0; r < r0 + grid.length; r++) {
+      for (let c = c0; c < c0 + grid[0].length; c++) {
+        largeGrid[r][c] = grid[r - r0][c - c0];
+      }
+    }
+    return largeGrid;
+  }
+
+  function topMostRowHavingLife(grid) {
+    for (let r = 0; r < grid.length; ++r) {
+      if (grid[r].includes(LIFE)) {
+        return r;
+      }
+    }
+  }
+
+  function bottomMostRowHavingLife(grid) {
+    for (let r = grid.length - 1; r >= 0; --r) {
+      if (grid[r].includes(LIFE)) {
+        return r;
+      }
+    }
+    return -1;
+  }
+
+  function leftMostColHavingLife(grid) {
+    for (let c = 0; c < grid[0].length; ++c) {
+      for (let r = 0; r < grid.length; ++r) {
+        if (grid[r][c] == LIFE) {
+          return c;
+        }
+      }
+    }
+    return -1;
+  }
+
+  function rightMostColHavingLife(grid) {
+    for (let c = grid[0].length - 1; c >= 0; --c) {
+      for (let r = 0; r < grid.length; ++r) {
+        if (grid[r][c] == LIFE) {
+          return c;
+        }
+      }
+    }
+    return -1;
+  }
+
+  function gridTrim(grid) {
+    if (!grid) return undefined;
+
+    // trim out top/bottom empty rows, left/right empty cols
+    let r1 = topMostRowHavingLife(grid);
+    let r2 = bottomMostRowHavingLife(grid);
+    let c1 = leftMostColHavingLife(grid);
+    let c2 = rightMostColHavingLife(grid);
+
+    const res = Array(r2 - r1 + 1).fill(0).map(_ => Array(c2 - c1 + 1).fill(0));
+
+    for (let r = 0; r < res.length; ++r) {
+      for (let c = 0; c < res[0].length; ++c) {
+        res[r][c] = grid[r + r1][c + c1];
+      }
+    }
+
+    return res;
+  }
+
+  function digitsArrayToCompactString(arrayOfZerosAndOnes) {
+    let counter = []; //example: [ ["0", 2], ["1", ]
+    for (let num of arrayOfZerosAndOnes) {
+      if (counter.length === 0 || counter[counter.length - 1][0] !== num) {
+        counter.push([num, 1]);
+      } else {
+        counter[counter.length - 1][1] += 1;
+      }
+    }
+
+    return counter.map(([num, count]) => {
+      if (num === LIFE) {
+        return `${LIFE_SYMBOL}${count}`;
+      }
+      return `${DEATH_SYMBOL}${count}`;
+    })
+      .reduce((prev, curSymbolCountStr) => prev + curSymbolCountStr, "");
+  }
+
+  function compactStringToDigitsArray(str) {
+    // str like: '.5O3.2', <symbol><number><symbol><number>
+    str = str ? str.trim() : "";
+    if (!str) {
+      return [];
+    }
+    let arr = [];
+    let l = 0;
+    const digits = "01234567890";
+
+    for (let r = 0; r < str.length; r++) {
+      if (l === r || digits.includes(str[r])) {
+        continue;
+      }
+
+      // has symbol, now we see another symbol, collect current <symbol><number>, where l is at symbo
+      let symbol = str[l];
+      let num = Number.parseInt(str.substring(l + 1, r));
+      if (Number.isNaN(num)) {
+        console.error("Bad format: ", str)
+        return []
+      }
+
+      arr = arr.concat(Array(num).fill(symbol === LIFE_SYMBOL ? LIFE : DEATH));
+      l = r;
+    }
+
+    let symbol = str[l];
+    let num = Number.parseInt(str.substring(l + 1));
+    if (!Number.isNaN(num)) {
+      arr = arr.concat(Array(num).fill(symbol === LIFE_SYMBOL ? LIFE : DEATH));
+    }
+    return arr;
+  }
+
+  function gridToCompactString(grid) {
+    return grid.map(digitArray => digitsArrayToCompactString(digitArray))
+      .join("_");
+  }
+
+  function compactStringToGrid(str) {
+    if (!str) {
+      return undefined;
+    }
+    return str.split("_").map(compactStringToDigitsArray);
+  }
+
+  (function test() {
+    const arr1 = [0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0];
+    const arr1Str = '.5O3.1O2.1O1.2';
+    console.assert(arr1Str === digitsArrayToCompactString(arr1));
+
+    const arr1b = compactStringToDigitsArray(arr1Str);
+    for (let i = 0; i < arr1b.length; i++) {
+      console.assert(arr1b[i] === arr1[i]);
+    }
+
+    const grid1 = [[1, 1, 0], [0, 1, 0]];;
+    const grid1Str = 'O2.1_.1O1.1';
+    if (grid1Str !== gridToCompactString(grid1)) throw new Error("Test");
+    const grid1b = compactStringToGrid(grid1Str);
+    for (let r = 0; r < grid1.length; r++) {
+      for (let c = 0; c < grid1[0].length; c++) {
+        console.assert(grid1b[r][c] === grid1[r][c]);
+      }
+    }
+
+    console.assert('[[1,0,0],[0,1,1],[0,1,1]]' === JSON.stringify(gridTrim([
+      [0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0],
+      [0, 1, 0, 0, 0],
+      [0, 0, 1, 1, 0],
+      [0, 0, 1, 1, 0],
+      [0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0]])));
+
+    console.assert(Number.NEGATIVE_INFINITY === maxNumber(NaN, undefined, null, "1"));
+    console.assert(-5.5 === maxNumber(NaN, undefined, -5.5, -7, null, "1"));
+    console.assert(9 === maxNumber(1, 2, 3, 4, 5, 0, 9, 8, 7, 6, 9));
+  })();
+
+</script>
+
+<script>
+
+  function xyposToIndex(canvasXOffset, canvasYOffset, cellW, cellH) {
+    let c = Math.floor(canvasXOffset / cellW);
+    let r = Math.floor(canvasYOffset / cellH);
+    return { r, c };
+  }
+
+  function attachCanvasEventListeners(canvas, config, grid) {
+
+    canvas.addEventListener('dblclick', function onClickCanvas(event) {
+      // toggle
+      let { r, c } = xyposToIndex(event.offsetX, event.offsetY, config.cellWidth, config.cellHeight);
+      if (r >= 0 && c >= 0 && r < grid.length && c < grid[0].length) {
+        grid[r][c] = DEATH;
+      }
+      drawGridToCanvas(canvas, config, grid);
+    });
+
+    canvas.addEventListener('click', (event) => {
+      let { r, c } = xyposToIndex(event.offsetX, event.offsetY, config.cellWidth, config.cellHeight);
+      if (r >= 0 && c >= 0 && r < grid.length && c < grid[0].length) {
+        grid[r][c] = LIFE;
+      }
+      drawGridToCanvas(canvas, config, grid);
+    })
+
+    canvas.addEventListener('mousedown', function onMouseDownCanvas(event) {
+      isMouseDownOnCanvas = true;
+    });
+
+    canvas.addEventListener('mouseup', function onMouseUpCanvas(event) {
+      isMouseDownOnCanvas = false;
+    });
+
+    canvas.addEventListener('mousemove', function onMouseMoveCanvas(event) {
+      if (isMouseDownOnCanvas) {
+        let { r, c } = xyposToIndex(event.offsetX, event.offsetY, config.cellWidth, config.cellHeight);
+        if (r >= 0 && c >= 0 && r < grid.length && c < grid[0].length) {
+          grid[r][c] = LIFE;
+        }
+        drawGridToCanvas(canvas, config, grid);
+      }
+    });
+  }
+
+  function setupCanvas(config, grid) {
+    canvas = document.getElementById("canvas");
+    canvas.width = config.canvasWidth;
+    canvas.height = config.canvasHeight;
+    canvas.style.border = "1px solid #000";
+
+    attachCanvasEventListeners(canvas, config, grid);
+
+    return canvas;
+  }
+
+  function drawGridToCanvas(canvasElem, config, grid) {
+    const context = canvasElem.getContext("2d");
+
+    context.clearRect(0, 0, canvasElem.width, canvasElem.height);
+
+    // Workaround to avoid blurry rectangle border
+    context.strokeRect1 = function (x, y, w, h) {
+      x = parseInt(x) + 0.50;
+      y = parseInt(y) + 0.50;
+      this.strokeRect(x, y, w, h);
+    }
+    context.fillRect1 = function (x, y, w, h) {
+      x = parseInt(x);
+      y = parseInt(y);
+      context.fillRect(x, y, w, h);
+    }
+
+    context.strokeStyle = config.cellBorderStyle;
+    context.fillStyle = config.cellFillStyle;
+
+    // draw grid
+    for (let r = 0; r < grid.length; r++) {
+      for (let c = 0; c < grid[0].length; c++) {
+        let x = config.cellWidth * c;
+        let y = config.cellHeight * r;
+        if (grid[r][c] == LIFE) {
+          // life, fill it
+          context.fillRect1(x, y, config.cellWidth, config.cellHeight);
+        }
+        context.strokeRect1(x, y, config.cellWidth, config.cellHeight);
+      }
+    }
+  }
+
+  function onPlay() {
+    let gridStr = gridToCompactString(gridTrim(GRID));
+    console.log("grid: ", GRID)
+    window.open(`https://y-pan.github.io/tiny-things/game-of-life.html?factor=${CONFIG.factor}&grid=${gridStr}`, "_blank")
+  }
+  // ----
+  function start() {
+    console.log("Start...");
+    const params = new URLSearchParams(window.location.search);
+
+    let gridFromParam = compactStringToGrid(params.get("grid"));
+    gridFromParam = gridTrim(compactStringToGrid(params.get("grid")));
+    console.log("gridFromParam", gridFromParam);
+
+    const factor = maxNumber(Number.parseFloat(params.get("factor")), 0.1);
+
+    CONFIG = {
+      factor: factor,
+      canvasWidth: 800 * factor,
+      canvasHeight: 800 * factor,
+      numRows: maxNumber(40 * factor, 10, gridFromParam?.length),
+      numCols: maxNumber(40 * factor, 10, gridFromParam && gridFromParam[0] && gridFromParam[0].length),
+      randomLifeThreshold: 0.7,
+      cellBorderStyle: "#ccc",
+      cellFillStyle: "#066", // LIFE cell fill color
+      lifeSpanMilliSeconds: 200,
+    }
+
+    CONFIG.cellWidth = Math.floor(CONFIG.canvasWidth / CONFIG.numCols);
+    CONFIG.cellHeight = Math.floor(CONFIG.canvasHeight / CONFIG.numRows);
+
+    GRID = gridFromParam ? gridExpand(gridFromParam, CONFIG.numRows, CONFIG.numCols) : zeros(CONFIG.numRows, CONFIG.numCols);
+    console.log("CONFIG: ", CONFIG);
+    console.log("First Generation: ");
+    console.log(gridToCompactString(GRID));
+
+    let canvas = setupCanvas(CONFIG, GRID);
+
+    drawGridToCanvas(canvas, CONFIG, GRID);
+  }
+</script>
+
+</html>
