@@ -45,6 +45,7 @@ function topMostRowHavingLife(grid, lifeDigit) {
       return r;
     }
   }
+  return -1;
 }
 
 function bottomMostRowHavingLife(grid, lifeDigit) {
@@ -86,6 +87,11 @@ function gridTrim(grid, lifeDigit) {
   let r2 = bottomMostRowHavingLife(grid, lifeDigit);
   let c1 = leftMostColHavingLife(grid, lifeDigit);
   let c2 = rightMostColHavingLife(grid, lifeDigit);
+
+  if (r1 === -1) {
+    // grid has no life
+    return undefined;
+  }
 
   const res = Array(r2 - r1 + 1)
     .fill(0)

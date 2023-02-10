@@ -24,6 +24,15 @@
       height: 10px;
     }
 
+    #btn-full {
+      background-color: #066;
+      color: #fff;
+    }
+
+    #btn-play {
+      color: #002ef8;
+    }
+
   </style>
 </head>
 
@@ -33,9 +42,9 @@
     <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Wikipedia Reference</a>
   </div>
   <br>
-  <button onclick="onFull()">Full</button>
-  <button onclick="onClear()">Clear</button>
-  <button onclick="onPlay()">Play</button>
+  <button id="btn-full" onclick="onFull()">Full</button>
+  <button id="btn-clear" onclick="onClear()">Clear</button>
+  <button id="btn-play" onclick="onPlay()">Play</button>
   <br>
   <br>
   <canvas id="canvas"></canvas>
@@ -148,6 +157,10 @@
 
   function onPlay() {
     let gridTrimmed = gridTrim(GRID, LIFE_CONFIG.lifeDigit);
+    if (!gridTrimmed?.length) {
+      alert("Can't play without lifes.");
+      return;
+    }
     let gridTrimmedStr = gridToCompactString(gridTrimmed, LIFE_CONFIG);
     console.log("Grid trimmed: ", gridTrimmed)
     console.log("Grid stringified: ", gridTrimmedStr)
