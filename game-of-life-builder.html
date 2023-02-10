@@ -66,8 +66,6 @@
     CANVAS.addEventListener('mousedown', function onMouseDownCanvas(event) {
       isMouseDownOnCanvas = true;
       // toggle life
-      console.log("down")
-
       let { r, c } = xyposToIndex(event.offsetX, event.offsetY, CONFIG.cellWidth, CONFIG.cellHeight);
       if (r >= 0 && c >= 0 && r < GRID.length && c < GRID[0].length) {
         GRID[r][c] = GRID[r][c] == LIFE_CONFIG.lifeDigit ? LIFE_CONFIG.deathDigit : LIFE_CONFIG.lifeDigit;
@@ -83,7 +81,6 @@
 
     CANVAS.addEventListener('mousemove', function onMouseMoveCanvas(event) {
       if (isMouseDownOnCanvas) {
-        console.log("move")
         // drag and place life
         let { r, c } = xyposToIndex(event.offsetX, event.offsetY, CONFIG.cellWidth, CONFIG.cellHeight);
         let isWithinGrid = r >= 0 && c >= 0 && r < GRID.length && c < GRID[0].length;
@@ -150,9 +147,11 @@
   }
 
   function onPlay() {
-    let gridStr = gridToCompactString(gridTrim(GRID, LIFE_CONFIG.lifeDigit), LIFE_CONFIG);
-    console.log("grid: ", GRID)
-    window.open(`https://y-pan.github.io/tiny-things/game-of-life.html?factor=${CONFIG.factor}&grid=${gridStr}`, "_blank")
+    let gridTrimmed = gridTrim(GRID, LIFE_CONFIG.lifeDigit);
+    let gridTrimmedStr = gridToCompactString(gridTrimmed, LIFE_CONFIG);
+    console.log("Grid trimmed: ", gridTrimmed)
+    console.log("Grid stringified: ", gridTrimmedStr)
+    window.open(`https://y-pan.github.io/tiny-things/game-of-life.html?factor=${CONFIG.factor}&grid=${gridTrimmedStr}`, "_blank")
   }
 
   function start() {
