@@ -56,6 +56,7 @@
   let GRID;
   let isMouseDownOnCanvas = false;
   let isErasing = false;
+  let mouseDownCell; // {r, c}
 </script>
 
 <script>
@@ -65,26 +66,33 @@
     CANVAS.addEventListener('mousedown', function onMouseDownCanvas(event) {
       isMouseDownOnCanvas = true;
       // toggle life
+      console.log("down")
+
       let { r, c } = xyposToIndex(event.offsetX, event.offsetY, CONFIG.cellWidth, CONFIG.cellHeight);
       if (r >= 0 && c >= 0 && r < GRID.length && c < GRID[0].length) {
         GRID[r][c] = GRID[r][c] == LIFE_CONFIG.lifeDigit ? LIFE_CONFIG.deathDigit : LIFE_CONFIG.lifeDigit;
+        mouseDownCell = { r, c };
       }
       drawGridToCanvas(CANVAS, CONFIG, GRID);
-
     });
 
     CANVAS.addEventListener('mouseup', function onMouseUpCanvas(event) {
       isMouseDownOnCanvas = false;
+      mouseDownCell = undefined;
     });
 
     CANVAS.addEventListener('mousemove', function onMouseMoveCanvas(event) {
       if (isMouseDownOnCanvas) {
+        console.log("move")
         // drag and place life
         let { r, c } = xyposToIndex(event.offsetX, event.offsetY, CONFIG.cellWidth, CONFIG.cellHeight);
-        if (r >= 0 && c >= 0 && r < GRID.length && c < GRID[0].length) {
+        let isWithinGrid = r >= 0 && c >= 0 && r < GRID.length && c < GRID[0].length;
+        let isMoveOnMouseDownCell = mouseDownCell && mouseDownCell.r == r && mouseDownCell.c == c;
+
+        if (isWithinGrid && !isMoveOnMouseDownCell) {
           GRID[r][c] = LIFE_CONFIG.lifeDigit;
+          drawGridToCanvas(CANVAS, CONFIG, GRID);
         }
-        drawGridToCanvas(CANVAS, CONFIG, GRID);
       }
     });
   }
