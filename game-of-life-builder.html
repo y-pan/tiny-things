@@ -30,11 +30,6 @@
 <body onload="start()">
   <div>
     <h3>Conway's Game of Life Builder</h3>
-    <ul>
-      <li>Click / drag on grid, to place lives. <span id="life-sample"> </span></li>
-      <li>Double-click a cell, erase the life. <span id="empty-sample"> </span></li>
-      <li>Click "Play" and see the evalution!</li>
-    </ul>
     <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Wikipedia Reference</a>
   </div>
   <br>
@@ -67,25 +62,15 @@
 
   function attachCanvasEventListeners() {
 
-    CANVAS.addEventListener('dblclick', function onClickCanvas(event) {
-      // toggle
-      let { r, c } = xyposToIndex(event.offsetX, event.offsetY, CONFIG.cellWidth, CONFIG.cellHeight);
-      if (r >= 0 && c >= 0 && r < GRID.length && c < GRID[0].length) {
-        GRID[r][c] = LIFE_CONFIG.deathDigit;
-      }
-      drawGridToCanvas(CANVAS, CONFIG, GRID);
-    });
-
-    CANVAS.addEventListener('click', (event) => {
-      let { r, c } = xyposToIndex(event.offsetX, event.offsetY, CONFIG.cellWidth, CONFIG.cellHeight);
-      if (r >= 0 && c >= 0 && r < GRID.length && c < GRID[0].length) {
-        GRID[r][c] = LIFE_CONFIG.lifeDigit;
-      }
-      drawGridToCanvas(CANVAS, CONFIG, GRID);
-    })
-
     CANVAS.addEventListener('mousedown', function onMouseDownCanvas(event) {
       isMouseDownOnCanvas = true;
+      // toggle life
+      let { r, c } = xyposToIndex(event.offsetX, event.offsetY, CONFIG.cellWidth, CONFIG.cellHeight);
+      if (r >= 0 && c >= 0 && r < GRID.length && c < GRID[0].length) {
+        GRID[r][c] = GRID[r][c] == LIFE_CONFIG.lifeDigit ? LIFE_CONFIG.deathDigit : LIFE_CONFIG.lifeDigit;
+      }
+      drawGridToCanvas(CANVAS, CONFIG, GRID);
+
     });
 
     CANVAS.addEventListener('mouseup', function onMouseUpCanvas(event) {
@@ -94,6 +79,7 @@
 
     CANVAS.addEventListener('mousemove', function onMouseMoveCanvas(event) {
       if (isMouseDownOnCanvas) {
+        // drag and place life
         let { r, c } = xyposToIndex(event.offsetX, event.offsetY, CONFIG.cellWidth, CONFIG.cellHeight);
         if (r >= 0 && c >= 0 && r < GRID.length && c < GRID[0].length) {
           GRID[r][c] = LIFE_CONFIG.lifeDigit;
