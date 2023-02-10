@@ -193,7 +193,7 @@
     console.log("Start...");
     const params = new URLSearchParams(window.location.search);
 
-    const gridFromParam = compactStringToGrid(params.get("grid"))
+    const gridFromParam = compactStringToGrid(params.get("grid"), LIFE_CONFIG)
 
     const factor = maxNumber(Number.parseFloat(params.get("factor")), 1);
 
