@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="game-of-life.js"></script>
   <title>Game Of Life</title>
+  <script src="game-of-life.js"></script>
   <style>
     #life-sample {
       display: inline-block;
@@ -36,7 +36,7 @@
   </style>
 </head>
 
-<body onload="start()">
+<body onload="onload()">
   <div>
     <h3>Conway's Game of Life Builder</h3>
     <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Wikipedia Reference</a>
@@ -167,7 +167,7 @@
     window.open(`https://y-pan.github.io/tiny-things/game-of-life.html?factor=${CONFIG.factor}&grid=${gridTrimmedStr}`, "_blank")
   }
 
-  function start() {
+  function onload() {
     console.log("Start...");
     const params = new URLSearchParams(window.location.search);
 
@@ -197,7 +197,6 @@
     console.log(gridToCompactString(GRID, LIFE_CONFIG));
 
     setupCanvas();
-
     drawGridToCanvas();
   }
 </script>

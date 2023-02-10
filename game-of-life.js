@@ -18,6 +18,16 @@ function zeros(numRows, numCols) {
     );
 }
 
+function gridClone(grid) {
+  const clone = zeros(grid.length, grid[0].length);
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[0].length; c++) {
+      clone[r][c] = grid[r][c];
+    }
+  }
+  return clone;
+}
+
 function fillGrid(grid, item) {
   for (let row of grid) {
     for (let c = 0; c < row.length; ++c) row[c] = item;
@@ -196,6 +206,54 @@ function xyposToIndex(canvasXOffset, canvasYOffset, cellW, cellH) {
   return { r, c };
 }
 
+function gridOfNewlineSeparatedSingleStr(
+  newLineSeparatedSingleStr,
+  lifeConfig
+) {
+  // More generations setting: https://conwaylife.com/ref/lexicon/lex_g.htm
+  // OO..O
+  // O...O
+  // O..OO
+  const grid = String(newLineSeparatedSingleStr)
+    .split("\n")
+    .map((rowStr) => rowStr.trim())
+    .filter(Boolean)
+    .map((rowStr) =>
+      rowStr
+        .split("")
+        .map((c) =>
+          c === lifeConfig.lifeSymbol
+            ? lifeConfig.lifeDigit
+            : lifeConfig.deathDigit
+        )
+    );
+
+  for (let r = 0; r < grid.length; r++) {
+    if (r - 1 >= 0 && grid[r].length != grid[r - 1].length) {
+      alert("Input format is not recognized - inconsistent row size");
+      return [[]];
+    }
+  }
+  return grid;
+}
+
+function randomized(grid, threshold, lifeConfig) {
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[0].length; c++) {
+      grid[r][c] =
+        Math.random() >= threshold
+          ? lifeConfig.lifeDigit
+          : lifeConfig.deathDigit;
+    }
+  }
+}
+
+function sleep(millisec = 1000) {
+  return new Promise((res, rej) => {
+    setTimeout(() => res(), millisec);
+  });
+}
+
 (function test() {
   const lifeConfig = {
     lifeDigit: 1,
@@ -249,4 +307,16 @@ function xyposToIndex(canvasXOffset, canvasYOffset, cellW, cellH) {
   );
   console.assert(-5.5 === maxNumber(NaN, undefined, -5.5, -7, null, "1"));
   console.assert(9 === maxNumber(1, 2, 3, 4, 5, 0, 9, 8, 7, 6, 9));
+
+  const gridFromStr = gridOfNewlineSeparatedSingleStr(
+    `
+      OO..O
+      O...O
+      O..OO
+      `,
+    lifeConfig
+  );
+  console.assert(
+    "[[1,1,0,0,1],[1,0,0,0,1],[1,0,0,1,1]]" === JSON.stringify(gridFromStr)
+  );
 })();

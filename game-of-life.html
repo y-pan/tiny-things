@@ -6,6 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Game Of Life</title>
+  <script src="game-of-life.js"></script>
   <style></style>
 </head>
 
@@ -27,12 +28,15 @@
 
 <script>
   // constants
-  const LIFE = 1;
-  const DEATH = 0;
-  const LIFE_SYMBOL = "O"; // non-digit
-  const DEATH_SYMBOL = ".";// non-digit
+  const LIFE_CONFIG = {
+    lifeDigit: 1,
+    deathDigit: 0,
+    lifeSymbol: "O",
+    deathSymbol: ".",
+  };
 
   // variables
+  let CANVAS;
   let CONFIG;
   let GRID;
   let gameInterval;
@@ -41,302 +45,20 @@
 </script>
 
 <script>
-  // only pure util functions
-  function maxNumber(...numbers) {
-    let m = Number.NEGATIVE_INFINITY;
-    for (let num of numbers) {
-      if (typeof num === "number" && Number.isFinite(num)) {
-        m = Math.max(m, num);
-      }
-    }
-    return m;
-  }
-
-  function zeros(numRows, numCols) {
-    return Array(numRows).fill(0).map(rv => Array(numCols).fill(0).map(cv => 0));
-  }
-
-  function topMostRowHavingLife(grid) {
-    for (let r = 0; r < grid.length; ++r) {
-      if (grid[r].includes(LIFE)) {
-        return r;
-      }
-    }
-  }
-
-  function bottomMostRowHavingLife(grid) {
-    for (let r = grid.length - 1; r >= 0; --r) {
-      if (grid[r].includes(LIFE)) {
-        return r;
-      }
-    }
-    return -1;
-  }
-
-  function leftMostColHavingLife(grid) {
-    for (let c = 0; c < grid[0].length; ++c) {
-      for (let r = 0; r < grid.length; ++r) {
-        if (grid[r][c] == LIFE) {
-          return c;
-        }
-      }
-    }
-    return -1;
-  }
-
-  function rightMostColHavingLife(grid) {
-    for (let c = grid[0].length - 1; c >= 0; --c) {
-      for (let r = 0; r < grid.length; ++r) {
-        if (grid[r][c] == LIFE) {
-          return c;
-        }
-      }
-    }
-    return -1;
-  }
-
-  function gridTrim(grid) {
-    if (!grid) return undefined;
-
-    // trim out top/bottom empty rows, left/right empty cols
-    let r1 = topMostRowHavingLife(grid);
-    let r2 = bottomMostRowHavingLife(grid);
-    let c1 = leftMostColHavingLife(grid);
-    let c2 = rightMostColHavingLife(grid);
-
-    const res = Array(r2 - r1 + 1).fill(0).map(_ => Array(c2 - c1 + 1).fill(0));
-
-    for (let r = 0; r < res.length; ++r) {
-      for (let c = 0; c < res[0].length; ++c) {
-        res[r][c] = grid[r + r1][c + c1];
-      }
-    }
-
-    return res;
-  }
-
-  function gridClone(grid) {
-    const clone = zeros(grid.length, grid[0].length);
-    for (let r = 0; r < grid.length; r++) {
-      for (let c = 0; c < grid[0].length; c++) {
-        clone[r][c] = grid[r][c];
-      }
-    }
-    return clone;
-  }
-
-  function digitsArrayToCompactString(arrayOfZerosAndOnes) {
-    let counter = []; //example: [ ["0", 2], ["1", ]
-    for (let num of arrayOfZerosAndOnes) {
-      if (counter.length === 0 || counter[counter.length - 1][0] !== num) {
-        counter.push([num, 1]);
-      } else {
-        counter[counter.length - 1][1] += 1;
-      }
-    }
-
-    return counter.map(([num, count]) => {
-      if (num === LIFE) {
-        return `${LIFE_SYMBOL}${count}`;
-      }
-      return `${DEATH_SYMBOL}${count}`;
-    })
-      .reduce((prev, curSymbolCountStr) => prev + curSymbolCountStr, "");
-  }
-
-  function compactStringToDigitsArray(str) {
-    // str like: '.5O3.2', <symbol><number><symbol><number>
-    str = str ? str.trim() : "";
-    if (!str) {
-      return [];
-    }
-    let arr = [];
-    let l = 0;
-    const digits = "01234567890";
-
-    for (let r = 0; r < str.length; r++) {
-      if (l === r || digits.includes(str[r])) {
-        continue;
-      }
-
-      // has symbol, now we see another symbol, collect current <symbol><number>, where l is at symbo
-      let symbol = str[l];
-      let num = Number.parseInt(str.substring(l + 1, r));
-      if (Number.isNaN(num)) {
-        console.error("Bad format: ", str)
-        return []
-      }
-
-      arr = arr.concat(Array(num).fill(symbol === LIFE_SYMBOL ? LIFE : DEATH));
-      l = r;
-    }
-
-    let symbol = str[l];
-    let num = Number.parseInt(str.substring(l + 1));
-    if (!Number.isNaN(num)) {
-      arr = arr.concat(Array(num).fill(symbol === LIFE_SYMBOL ? LIFE : DEATH));
-    }
-    return arr;
-  }
-
-  (function test() {
-    const arr1 = [0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0];
-    const arr1Str = '.5O3.1O2.1O1.2';
-    console.assert(arr1Str === digitsArrayToCompactString(arr1));
-
-    const arr1b = compactStringToDigitsArray(arr1Str);
-    for (let i = 0; i < arr1b.length; i++) {
-      console.assert(arr1b[i] === arr1[i]);
-    }
-
-    const grid1 = [[1, 1, 0], [0, 1, 0]];;
-    const grid1Str = 'O2.1_.1O1.1';
-    if (grid1Str !== gridToCompactString(grid1)) throw new Error("Test");
-    const grid1b = compactStringToGrid(grid1Str);
-    for (let r = 0; r < grid1.length; r++) {
-      for (let c = 0; c < grid1[0].length; c++) {
-        console.assert(grid1b[r][c] === grid1[r][c]);
-      }
-    }
-  })();
-
-  function gridToCompactString(grid) {
-    return grid.map(digitArray => digitsArrayToCompactString(digitArray))
-      .join("_");
-  }
-
-  function compactStringToGrid(str) {
-    if (!str) {
-      return undefined;
-    }
-    return str.split("_").map(compactStringToDigitsArray);
-  }
-
-  function gridOfNewlineSeparatedSingleStr(newLineSeparatedSingleStr, lifeSymbol = LIFE_SYMBOL) {
-    // More generations setting: https://conwaylife.com/ref/lexicon/lex_g.htm
-    // OO..O
-    // O...O
-    // O..OO
-    const grid = String(newLineSeparatedSingleStr).split("\n").map(rowStr => rowStr.trim()).filter(Boolean)
-      .map(rowStr => rowStr.split("").map(c => c === lifeSymbol ? LIFE : DEATH));
-
-    for (let r = 0; r < grid.length; r++) {
-      if (r - 1 >= 0 && grid[r].length != grid[r - 1].length) {
-        alert("Input format is not recognized - inconsistent row size");
-        return [[]];
-      }
-    }
-    return grid;
-  }
-
-  function gridExpand(grid, desiredRows, desiredCols) {
-    let R = grid.length;
-    let C = grid[0].length;
-    let largeGrid = zeros(desiredRows, desiredCols);
-
-    let r0 = Math.floor((desiredRows - R) / 2);
-    let c0 = Math.floor((desiredCols - C) / 2);
-    for (let r = r0; r < r0 + grid.length; r++) {
-      for (let c = c0; c < c0 + grid[0].length; c++) {
-        largeGrid[r][c] = grid[r - r0][c - c0];
-      }
-    }
-    return largeGrid;
-  }
-
-  function randomized(grid, randomLifeThreshold) {
-    for (let r = 0; r < grid.length; r++) {
-      for (let c = 0; c < grid[0].length; c++) {
-        grid[r][c] = Math.random() >= randomLifeThreshold ? LIFE : DEATH;
-      }
-    }
-  }
-
   function seedRandom(numRows, numCols, randomLifeThreshold) {
     const grid = zeros(numRows, numCols);
-    randomized(grid, randomLifeThreshold);
+    randomized(grid, randomLifeThreshold, LIFE_CONFIG);
     return grid;
   }
 
-  function seedOscillatorBlinker(numRows, numCols) {
-    const grid = zeros(numRows, numCols);
-    let r0 = Math.floor(numRows / 2);
-    let c0 = Math.floor(numCols / 2);
-
-    grid[Math.max(0, r0 - 1)][Math.max(1, c0)] = 1;
-    grid[Math.max(0, r0)][c0] = 1;
-    grid[Math.max(0, r0 + 1)][c0] = 1;
-    return grid;
-  }
-
-  function seedOscillatorToad(numRows, numCols) {
-    const grid = zeros(numRows, numCols);
-    let r0 = Math.floor(numRows / 2);
-    let c0 = Math.floor(numCols / 2);
-
-    grid[Math.max(0, r0 - 1)][Math.max(1, c0)] = 1;
-    grid[Math.max(0, r0)][c0] = 1;
-    grid[Math.max(0, r0 + 1)][c0] = 1;
-    return grid;
-  }
-
-  function seedGlidersByTheDozen(config) {
-    const grid = gridOfNewlineSeparatedSingleStr(
-      `
-OO..O
-O...O
-O..OO
-`, "O"
-    );
-
-    return gridExpand(grid, config.numRows, config.numCols);
-  }
-
-  function seedGlidersGospersGun(config) {
-    const grid = gridOfNewlineSeparatedSingleStr(
-      `	........................O...........
-	......................O.O...........
-	............OO......OO............OO
-	...........O...O....OO............OO
-	OO........O.....O...OO..............
-	OO........O...O.OO....O.O...........
-	..........O.....O.......O...........
-	...........O...O....................
-	............OO......................
-`, "O"
-    )
-    return gridExpand(grid, config.numRows, config.numCols);
-  }
-
-  function seedGridersBlockCycle(config) {
-    const grid = gridOfNewlineSeparatedSingleStr(
-      `
-  ...OO...
-	...OO...
-	........
-	........
-	..O..O..
-	O.O..O.O
-	.OO..OO.`, "O"
-    );
-    return gridExpand(grid, config.numRows, config.numCols);
-  }
-
-  function seedWithNewlineSeparatedSingleStr(config, inputStr, lifeSymbol = LIFE_SYMBOL) {
-    const grid = gridOfNewlineSeparatedSingleStr(inputStr,);
+  function seedWithNewlineSeparatedSingleStr(config, inputStr, lifeSymbol = LIFE_CONFIG.lifeSymbol) {
+    const grid = gridOfNewlineSeparatedSingleStr(inputStr, LIFE_CONFIG);
     return gridExpand(grid, config.numRows, config.numCols);
   }
 
   function seed(config) {// the global CONFIG
     console.log("Seeding with default");
-    let grid;
-
-    grid = seedRandom(config.numRows, config.numCols, config.randomLifeThreshold);
-    // grid = seedGlidersByTheDozen(config);
-    // grid = seedGridersBlockCycle(config);
-    // grid = seedGlidersGospersGun(config);
-
-    return grid;
+    return seedRandom(config.numRows, config.numCols, config.randomLifeThreshold);
   }
 
   function lifeOrDeath(r, c, grid) {
@@ -345,34 +67,34 @@ O..OO
     // All other live cells die in the next generation. Similarly, all other dead cells stay dead.
     let liveNeighbours = 0;
 
-    liveNeighbours += (r - 1 >= 0 && grid[r - 1][c] == LIFE) ? 1 : 0;
-    liveNeighbours += (r + 1 < grid.length && grid[r + 1][c] == LIFE) ? 1 : 0;
-    liveNeighbours += (c - 1 >= 0 && grid[r][c - 1] == LIFE) ? 1 : 0;
-    liveNeighbours += (c + 1 < grid[0].length && grid[r][c + 1] == LIFE) ? 1 : 0;
+    liveNeighbours += (r - 1 >= 0 && grid[r - 1][c] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
+    liveNeighbours += (r + 1 < grid.length && grid[r + 1][c] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
+    liveNeighbours += (c - 1 >= 0 && grid[r][c - 1] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
+    liveNeighbours += (c + 1 < grid[0].length && grid[r][c + 1] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
 
-    liveNeighbours += (r - 1 >= 0 && c - 1 >= 0 && grid[r - 1][c - 1] == LIFE) ? 1 : 0;
-    liveNeighbours += (r - 1 >= 0 && c + 1 < grid[0].length && grid[r - 1][c + 1] == LIFE) ? 1 : 0;
-    liveNeighbours += (r + 1 < grid.length && c - 1 >= 0 && grid[r + 1][c - 1] == LIFE) ? 1 : 0;
-    liveNeighbours += (r + 1 < grid.length && c + 1 < grid[0].length && grid[r + 1][c + 1] == LIFE) ? 1 : 0;
+    liveNeighbours += (r - 1 >= 0 && c - 1 >= 0 && grid[r - 1][c - 1] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
+    liveNeighbours += (r - 1 >= 0 && c + 1 < grid[0].length && grid[r - 1][c + 1] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
+    liveNeighbours += (r + 1 < grid.length && c - 1 >= 0 && grid[r + 1][c - 1] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
+    liveNeighbours += (r + 1 < grid.length && c + 1 < grid[0].length && grid[r + 1][c + 1] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
 
-    if (grid[r][c] == LIFE && (liveNeighbours == 2 || liveNeighbours == 3)) {
-      return LIFE;
+    if (grid[r][c] == LIFE_CONFIG.lifeDigit && (liveNeighbours == 2 || liveNeighbours == 3)) {
+      return LIFE_CONFIG.lifeDigit;
     }
-    if (grid[r][c] == DEATH && liveNeighbours == 3) {
-      return LIFE;
+    if (grid[r][c] == LIFE_CONFIG.deathDigit && liveNeighbours == 3) {
+      return LIFE_CONFIG.lifeDigit;
     }
-    return DEATH;
+    return LIFE_CONFIG.deathDigit;
   }
 
-  function nextGeneration(grid) {
-    const oldGen = gridClone(grid);
+  function nextGeneration() {
+    const oldGen = gridClone(GRID);
     let hasLife = false;
     // in-place update grid as next generation
-    for (let r = 0; r < grid.length; r++) {
-      for (let c = 0; c < grid[0].length; c++) {
-        grid[r][c] = lifeOrDeath(r, c, oldGen);
+    for (let r = 0; r < GRID.length; r++) {
+      for (let c = 0; c < GRID[0].length; c++) {
+        GRID[r][c] = lifeOrDeath(r, c, oldGen);
 
-        if (grid[r][c] == LIFE) {
+        if (GRID[r][c] == LIFE_CONFIG.lifeDigit) {
           hasLife = true;
         }
       }
@@ -383,18 +105,17 @@ O..OO
 </script>
 
 <script>
-  function setupCanvas(config) {
-    canvas = document.getElementById("canvas");
-    canvas.width = config.canvasWidth;
-    canvas.height = config.canvasHeight;
-    canvas.style.border = "1px solid #000";
-    return canvas;
+  function setupCanvas() {
+    CANVAS = document.getElementById("canvas");
+    CANVAS.width = CONFIG.canvasWidth;
+    CANVAS.height = CONFIG.canvasHeight;
+    CANVAS.style.border = "1px solid #000";
   }
 
-  function drawGridToCanvas(canvasElem, config, grid) {
-    const context = canvasElem.getContext("2d");
+  function drawGridToCanvas() {
+    const context = CANVAS.getContext("2d");
 
-    context.clearRect(0, 0, canvasElem.width, canvasElem.height);
+    context.clearRect(0, 0, CANVAS.width, CANVAS.height);
 
     // Workaround to avoid blurry rectangle border
     context.strokeRect1 = function (x, y, w, h) {
@@ -408,24 +129,24 @@ O..OO
       context.fillRect(x, y, w, h);
     }
 
-    context.strokeStyle = config.cellBorderStyle;
-    context.fillStyle = config.cellFillStyle;
+    context.strokeStyle = CONFIG.cellBorderStyle;
+    context.fillStyle = CONFIG.cellFillStyle;
 
     // draw grid
-    for (let r = 0; r < grid.length; r++) {
-      for (let c = 0; c < grid[0].length; c++) {
-        let x = config.cellWidth * c;
-        let y = config.cellHeight * r;
-        if (grid[r][c] == LIFE) {
+    for (let r = 0; r < GRID.length; r++) {
+      for (let c = 0; c < GRID[0].length; c++) {
+        let x = CONFIG.cellWidth * c;
+        let y = CONFIG.cellHeight * r;
+        if (GRID[r][c] == LIFE_CONFIG.lifeDigit) {
           // life, fill it
-          context.fillRect1(x, y, config.cellWidth, config.cellHeight);
+          context.fillRect1(x, y, CONFIG.cellWidth, CONFIG.cellHeight);
         }
-        context.strokeRect1(x, y, config.cellWidth, config.cellHeight);
+        context.strokeRect1(x, y, CONFIG.cellWidth, CONFIG.cellHeight);
       }
     }
   }
 
-  function updateStats(generationCount) {
+  function updateStats() {
     const generationCountElem = document.getElementById("generationCount");
     if (generationCountElem) {
       generationCountElem.innerText = generationCount;
@@ -442,10 +163,10 @@ O..OO
   function run() {
     gameInterval = setInterval(() => {
       if (!isStopped) {
-        const hasLife = nextGeneration(GRID);
+        const hasLife = nextGeneration();
         updateStats(++generationCount);
 
-        drawGridToCanvas(canvas, CONFIG, GRID);
+        drawGridToCanvas();
         if (!hasLife) {
           clearInterval(gameInterval);
           showGameOver();
@@ -461,9 +182,11 @@ O..OO
   }
 
   function onBuildFromHere() {
-    let gridStr = gridToCompactString(gridTrim(gridClone(GRID)));
-    console.log("Current grid: ", gridStr)
-    window.open(`https://y-pan.github.io/tiny-things/game-of-life-builder.html?factor=${CONFIG.factor}&grid=${gridStr}`, "_blank");
+    let gridTrimmed = gridTrim(gridClone(GRID), LIFE_CONFIG.lifeDigit);
+    let gridTrimmedStr = gridToCompactString(gridTrimmed, LIFE_CONFIG);
+    console.log("Grid timmed: ", gridTrimmed)
+    console.log("Grid timmed string: ", gridTrimmedStr)
+    window.open(`https://y-pan.github.io/tiny-things/game-of-life-builder.html?factor=${CONFIG.factor}&grid=${gridTrimmedStr}`, "_blank");
   }
 
   function onload() {
@@ -482,7 +205,7 @@ O..OO
       numCols: maxNumber(10, 100 * factor, gridFromParam && gridFromParam[0] && gridFromParam[0].length),
       randomLifeThreshold: 0.7,
       cellBorderStyle: "#ccc",
-      cellFillStyle: "#066", // LIFE cell fill color
+      cellFillStyle: "#066", // LIFE_CONFIG.lifeDigit cell fill color
       lifeSpanMilliSeconds: 200,
     }
 
@@ -493,15 +216,14 @@ O..OO
     GRID = gridFromParam ? gridExpand(gridFromParam, CONFIG.numRows, CONFIG.numCols) : seed(CONFIG);
     console.log("CONFIG: ", CONFIG);
     console.log("First Generation: ");
-    console.log(gridToCompactString(GRID));
+    console.log(gridToCompactString(GRID, LIFE_CONFIG));
 
-    const canvas = setupCanvas(CONFIG);
-
+    setupCanvas();
     generationCount = 0;
-    drawGridToCanvas(canvas, CONFIG, GRID);
-    updateStats(generationCount);
+    drawGridToCanvas();
+    updateStats();
 
-    run();
+    sleep(500).then(() => run());
   }
 </script>
 
