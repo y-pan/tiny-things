@@ -48,7 +48,7 @@
 <script>
   function seedRandom(numRows, numCols, randomLifeThreshold) {
     const grid = zeros(numRows, numCols);
-    randomized(grid, randomLifeThreshold, LIFE_CONFIG);
+    randomized_(grid, randomLifeThreshold, LIFE_CONFIG);
     return grid;
   }
 
@@ -62,47 +62,6 @@
     return seedRandom(config.numRows, config.numCols, config.randomLifeThreshold);
   }
 
-  function lifeOrDeath(r, c, grid) {
-    // Any live cell with two or three live neighbours survives.
-    // Any dead cell with three live neighbours becomes a live cell.
-    // All other live cells die in the next generation. Similarly, all other dead cells stay dead.
-    let liveNeighbours = 0;
-
-    liveNeighbours += (r - 1 >= 0 && grid[r - 1][c] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
-    liveNeighbours += (r + 1 < grid.length && grid[r + 1][c] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
-    liveNeighbours += (c - 1 >= 0 && grid[r][c - 1] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
-    liveNeighbours += (c + 1 < grid[0].length && grid[r][c + 1] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
-
-    liveNeighbours += (r - 1 >= 0 && c - 1 >= 0 && grid[r - 1][c - 1] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
-    liveNeighbours += (r - 1 >= 0 && c + 1 < grid[0].length && grid[r - 1][c + 1] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
-    liveNeighbours += (r + 1 < grid.length && c - 1 >= 0 && grid[r + 1][c - 1] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
-    liveNeighbours += (r + 1 < grid.length && c + 1 < grid[0].length && grid[r + 1][c + 1] == LIFE_CONFIG.lifeDigit) ? 1 : 0;
-
-    if (grid[r][c] == LIFE_CONFIG.lifeDigit && (liveNeighbours == 2 || liveNeighbours == 3)) {
-      return LIFE_CONFIG.lifeDigit;
-    }
-    if (grid[r][c] == LIFE_CONFIG.deathDigit && liveNeighbours == 3) {
-      return LIFE_CONFIG.lifeDigit;
-    }
-    return LIFE_CONFIG.deathDigit;
-  }
-
-  function nextGeneration() {
-    const oldGen = gridClone(GRID);
-    let hasLife = false;
-    // in-place update grid as next generation
-    for (let r = 0; r < GRID.length; r++) {
-      for (let c = 0; c < GRID[0].length; c++) {
-        GRID[r][c] = lifeOrDeath(r, c, oldGen);
-
-        if (GRID[r][c] == LIFE_CONFIG.lifeDigit) {
-          hasLife = true;
-        }
-      }
-    }
-    return hasLife;
-  }
-
 </script>
 
 <script>
@@ -113,7 +72,7 @@
     CANVAS.style.border = "1px solid #000";
   }
 
-  function drawGridToCanvas() {
+  function draw() {
     const context = CANVAS.getContext("2d");
 
     context.clearRect(0, 0, CANVAS.width, CANVAS.height);
@@ -164,10 +123,10 @@
   function run() {
     gameInterval = setInterval(() => {
       if (!isStopped) {
-        const hasLife = nextGeneration();
+        const hasLife = nextGeneration_(GRID, LIFE_CONFIG);
         updateStats(++generationCount);
 
-        drawGridToCanvas();
+        draw();
         if (!hasLife) {
           clearInterval(gameInterval);
           showGameOver();
@@ -202,8 +161,8 @@
       factor: factor,
       canvasWidth: 800 * factor,
       canvasHeight: 800 * factor,
-      numRows: maxNumber(10, 100 * factor, gridFromParam?.length),
-      numCols: maxNumber(10, 100 * factor, gridFromParam && gridFromParam[0] && gridFromParam[0].length),
+      numRows: maxNumber(10, 100 * factor, gridFromParam?.length + 10),
+      numCols: maxNumber(10, 100 * factor, gridFromParam && gridFromParam[0] && gridFromParam[0].length + 10),
       randomLifeThreshold: 0.7,
       cellBorderStyle: "#ccc",
       cellFillStyle: "#066", // LIFE_CONFIG.lifeDigit cell fill color
@@ -221,7 +180,7 @@
 
     setupCanvas();
     generationCount = 0;
-    drawGridToCanvas();
+    draw();
     updateStats();
 
     sleep(500).then(() => run());

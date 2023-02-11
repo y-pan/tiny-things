@@ -48,7 +48,10 @@
   <br>
   <button id="btn-full" onclick="onFull()">Full</button>
   <button id="btn-clear" onclick="onClear()">Clear</button>
-  <button id="btn-play" onclick="onPlay()">Play</button>
+  <button id="btn-prev-generation" onclick="onPrevGeneration()">&lt;&lt; Prev Generation</button>
+  <button id="btn-next-generation" onclick="onNextGeneration()">Next Generation &gt;&gt;</button>
+  <button id="btn-play" onclick="onPlay()">Play From Here</button>
+
   <br>
   <br>
   <canvas id="canvas"></canvas>
@@ -63,6 +66,8 @@
     deathSymbol: ".",
   };
 
+  const GENERATIONS = [];
+
   // global var
   let CANVAS;
   let CONFIG;
@@ -70,9 +75,11 @@
   let isMouseDownOnCanvas = false;
   let isErasing = false;
   let mouseDownCell; // {r, c}
+  let hasLife = false;
 </script>
 
 <script>
+
 
   function attachCanvasEventListeners() {
 
@@ -84,7 +91,7 @@
         GRID[r][c] = GRID[r][c] == LIFE_CONFIG.lifeDigit ? LIFE_CONFIG.deathDigit : LIFE_CONFIG.lifeDigit;
         mouseDownCell = { r, c };
       }
-      drawGridToCanvas(CANVAS, CONFIG, GRID);
+      draw();
     });
 
     CANVAS.addEventListener('mouseup', function onMouseUpCanvas(event) {
@@ -101,7 +108,7 @@
 
         if (isWithinGrid && !isMoveOnMouseDownCell) {
           GRID[r][c] = LIFE_CONFIG.lifeDigit;
-          drawGridToCanvas(CANVAS, CONFIG, GRID);
+          draw();
         }
       }
     });
@@ -115,9 +122,19 @@
     attachCanvasEventListeners();
   }
 
-  function drawGridToCanvas() {
-    const context = CANVAS.getContext("2d");
+  function recordGeneration() {
+    if (hasLife) {
+      const trimmed = gridTrimBottomRight(GRID, LIFE_CONFIG.lifeDigit);
+      const trimmedStr = gridToCompactString(trimmed, LIFE_CONFIG);
 
+      key = "gol-" + GENERATIONS.length;
+      GENERATIONS.push(key);
+      sessionStorage.setItem(key, trimmedStr);
+    }
+  }
+
+  function draw() {
+    const context = CANVAS.getContext("2d");
     context.clearRect(0, 0, CANVAS.width, CANVAS.height);
 
     // Workaround to avoid blurry rectangle border
@@ -136,12 +153,17 @@
     context.fillStyle = CONFIG.cellFillStyle;
 
     // draw grid
+    hasLife = false;
+    const trimmed = gridTrimBottomRight(GRID, LIFE_CONFIG.lifeDigit);
+    const trimmedStr = gridToCompactString(trimmed, LIFE_CONFIG);
+
     for (let r = 0; r < GRID.length; r++) {
       for (let c = 0; c < GRID[0].length; c++) {
         let x = CONFIG.cellWidth * c;
         let y = CONFIG.cellHeight * r;
         if (GRID[r][c] == LIFE_CONFIG.lifeDigit) {
           // life, fill it
+          hasLife = true;
           context.fillRect1(x, y, CONFIG.cellWidth, CONFIG.cellHeight);
         }
         context.strokeRect1(x, y, CONFIG.cellWidth, CONFIG.cellHeight);
@@ -150,13 +172,13 @@
   }
 
   function onFull() {
-    fillGrid(GRID, LIFE_CONFIG.lifeDigit);
-    drawGridToCanvas();
+    fillGrid_(GRID, LIFE_CONFIG.lifeDigit);
+    draw();
   }
 
   function onClear() {
-    fillGrid(GRID, LIFE_CONFIG.deathDigit);
-    drawGridToCanvas();
+    fillGrid_(GRID, LIFE_CONFIG.deathDigit);
+    draw();
   }
 
   function onPlay() {
@@ -169,6 +191,37 @@
     console.log("Grid trimmed: ", gridTrimmed)
     console.log("Grid stringified: ", gridTrimmedStr)
     window.open(`https://y-pan.github.io/tiny-things/game-of-life.html?factor=${CONFIG.factor}&grid=${gridTrimmedStr}`, "_blank")
+  }
+
+  function onNextGeneration() {
+    if (hasLife) {
+      recordGeneration();
+      nextGeneration_(GRID, LIFE_CONFIG);
+      draw();
+    }
+  }
+
+  function onPrevGeneration() {
+    if (GENERATIONS.length) {
+      const prevKey = GENERATIONS.pop();
+      const prevGenStr = sessionStorage.getItem(prevKey);
+      sessionStorage.removeItem(prevKey);
+
+      const prevGrid = compactStringToGrid(prevGenStr, LIFE_CONFIG);
+      // fill GRID
+      for (let r = 0; r < prevGrid.length; r++) {
+        for (let c = 0; c < prevGrid[0].length; c++) {
+          GRID[r][c] = prevGrid[r][c];
+        }
+      }
+      for (let r = prevGrid.length; r < GRID.length; r++) {
+        for (let c = prevGrid[0].length; c < GRID[0].length; c++) {
+          GRID[r][c] = LIFE_CONFIG.deathDigit;
+        }
+      }
+
+      draw();
+    }
   }
 
   function onload() {
@@ -184,8 +237,8 @@
       factor: factor,
       canvasWidth: 800 * factor,
       canvasHeight: 800 * factor,
-      numRows: maxNumber(40 * factor, 10, gridFromParam?.length),
-      numCols: maxNumber(40 * factor, 10, gridFromParam && gridFromParam[0] && gridFromParam[0].length),
+      numRows: maxNumber(40 * factor, 10, gridFromParam?.length + 10),
+      numCols: maxNumber(40 * factor, 10, gridFromParam && gridFromParam[0] && gridFromParam[0].length + 10),
       randomLifeThreshold: 0.7,
       cellBorderStyle: "#ccc",
       cellFillStyle: "#066", // LIFE cell fill color
@@ -197,11 +250,10 @@
 
     GRID = gridFromParam ? gridExpand(gridFromParam, CONFIG.numRows, CONFIG.numCols) : zeros(CONFIG.numRows, CONFIG.numCols);
     console.log("CONFIG: ", CONFIG);
-    console.log("First Generation: ");
-    console.log(gridToCompactString(GRID, LIFE_CONFIG));
+    console.log("First Generation: ", gridToCompactString(GRID, LIFE_CONFIG));
 
     setupCanvas();
-    drawGridToCanvas();
+    draw();
   }
 </script>
 

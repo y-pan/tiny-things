@@ -28,7 +28,7 @@ function gridClone(grid) {
   return clone;
 }
 
-function fillGrid(grid, item) {
+function fillGrid_(grid, item) {
   for (let row of grid) {
     for (let c = 0; c < row.length; ++c) row[c] = item;
   }
@@ -102,6 +102,31 @@ function gridTrim(grid, lifeDigit) {
     // grid has no life
     return undefined;
   }
+
+  const res = Array(r2 - r1 + 1)
+    .fill(0)
+    .map((_) => Array(c2 - c1 + 1).fill(0));
+
+  for (let r = 0; r < res.length; ++r) {
+    for (let c = 0; c < res[0].length; ++c) {
+      res[r][c] = grid[r + r1][c + c1];
+    }
+  }
+
+  return res;
+}
+
+function gridTrimBottomRight(grid, lifeDigit) {
+  if (!grid) return undefined;
+
+  // trim out top/bottom empty rows, left/right empty cols
+  let r1 = 0;
+  let c1 = 0;
+  let r2 = bottomMostRowHavingLife(grid, lifeDigit);
+  let c2 = rightMostColHavingLife(grid, lifeDigit);
+
+  r2 = r2 === -1 ? grid.length - 1 : r2;
+  c2 = c2 === -1 ? grid[0].length - 1 : c2;
 
   const res = Array(r2 - r1 + 1)
     .fill(0)
@@ -237,13 +262,91 @@ function gridOfNewlineSeparatedSingleStr(
   return grid;
 }
 
-function randomized(grid, threshold, lifeConfig) {
+function randomized_(grid, threshold, lifeConfig) {
   for (let r = 0; r < grid.length; r++) {
     for (let c = 0; c < grid[0].length; c++) {
       grid[r][c] =
         Math.random() >= threshold
           ? lifeConfig.lifeDigit
           : lifeConfig.deathDigit;
+    }
+  }
+}
+
+function willLive(r, c, grid, lifeConfig) {
+  // Any live cell with two or three live neighbours survives.
+  // Any dead cell with three live neighbours becomes a live cell.
+  // All other live cells die in the next generation. Similarly, all other dead cells stay dead.
+  let liveNeighbours = 0;
+
+  liveNeighbours +=
+    r - 1 >= 0 && grid[r - 1][c] == lifeConfig.lifeDigit ? 1 : 0;
+  liveNeighbours +=
+    r + 1 < grid.length && grid[r + 1][c] == lifeConfig.lifeDigit ? 1 : 0;
+  liveNeighbours +=
+    c - 1 >= 0 && grid[r][c - 1] == lifeConfig.lifeDigit ? 1 : 0;
+  liveNeighbours +=
+    c + 1 < grid[0].length && grid[r][c + 1] == lifeConfig.lifeDigit ? 1 : 0;
+
+  liveNeighbours +=
+    r - 1 >= 0 && c - 1 >= 0 && grid[r - 1][c - 1] == lifeConfig.lifeDigit
+      ? 1
+      : 0;
+  liveNeighbours +=
+    r - 1 >= 0 &&
+    c + 1 < grid[0].length &&
+    grid[r - 1][c + 1] == lifeConfig.lifeDigit
+      ? 1
+      : 0;
+  liveNeighbours +=
+    r + 1 < grid.length &&
+    c - 1 >= 0 &&
+    grid[r + 1][c - 1] == lifeConfig.lifeDigit
+      ? 1
+      : 0;
+  liveNeighbours +=
+    r + 1 < grid.length &&
+    c + 1 < grid[0].length &&
+    grid[r + 1][c + 1] == lifeConfig.lifeDigit
+      ? 1
+      : 0;
+
+  if (
+    grid[r][c] == lifeConfig.lifeDigit &&
+    (liveNeighbours == 2 || liveNeighbours == 3)
+  ) {
+    return lifeConfig.lifeDigit;
+  }
+  if (grid[r][c] == lifeConfig.deathDigit && liveNeighbours == 3) {
+    return lifeConfig.lifeDigit;
+  }
+  return lifeConfig.deathDigit;
+}
+
+function nextGeneration_(grid, lifeConfig) {
+  const oldGen = gridClone(grid);
+  let hasLife = false;
+  // in-place update grid as next generation
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[0].length; c++) {
+      grid[r][c] = willLive(r, c, oldGen, lifeConfig)
+        ? lifeConfig.lifeDigit
+        : lifeConfig.deathDigit;
+
+      if (grid[r][c] == lifeConfig.lifeDigit) {
+        hasLife = true;
+      }
+    }
+  }
+  return hasLife;
+}
+
+function gridHasLife(grid, lifeConfig) {
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[0].length; c++) {
+      if (grid[r][c] === lifeConfig.lifeDigit) {
+        return true;
+      }
     }
   }
 }
