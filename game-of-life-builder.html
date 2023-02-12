@@ -309,12 +309,13 @@ O..OO
 
   function setupGrid(initialGrid, factor) {
     clearPrevGenerations();
+    const maxOfRowsOrCols = maxNumber(40 * factor, 10, initialGrid?.length + 10, initialGrid && initialGrid[0] && initialGrid[0].length + 10);
     CONFIG = {
       factor: factor,
       canvasWidth: 800 * factor,
       canvasHeight: 800 * factor,
-      numRows: maxNumber(40 * factor, 10, initialGrid?.length + 10),
-      numCols: maxNumber(40 * factor, 10, initialGrid && initialGrid[0] && initialGrid[0].length + 10),
+      numRows: maxOfRowsOrCols,
+      numCols: maxOfRowsOrCols,
       randomLifeThreshold: 0.7,
       cellBorderStyle: "#ccc",
       cellFillStyle: "#066", // LIFE cell fill color
