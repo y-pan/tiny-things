@@ -33,8 +33,21 @@
       color: #002ef8;
     }
 
-    canvas:hover {
+    #canvas:hover {
       cursor: cell;
+    }
+
+    #textare-grid-numbers {
+      border: 1px solid #ccc;
+    }
+
+    #textare-grid-string {
+      border: 1px solid #ccc;
+    }
+
+    #input-life-symbol,
+    #input-death-symbol {
+      width: 100px;
     }
 
   </style>
@@ -46,13 +59,29 @@
     <a href="https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life">Wikipedia Reference</a>
   </div>
   <br>
+
+  <div>
+    <label>Enter couple lines of life & death symbols below.
+      <a href="https://conwaylife.com/ref/lexicon/lex_g.htm" target="_blank">Examples on "Life Lexicon"</a>
+    </label>
+    <br>
+
+    <br>
+    <textarea id="textare-grid-symbols" rows="10" cols="80"></textarea>
+    <br>
+    <label for="input-life-symbol">Life Symbo:</label>
+    <input value="O" id="input-life-symbol">
+    <label for="input-death-symbol">Death Symbo:</label>
+    <input value="." id="input-death-symbol">
+    <button id="btn-apply-textare-grid-symbols" onclick="onApplyGridSymbols()">Apply symbols as grid data</button>
+  </div>
+
+  <br>
   <button id="btn-full" onclick="onFull()">Full</button>
   <button id="btn-clear" onclick="onClear()">Clear</button>
   <button id="btn-prev-generation" onclick="onPrevGeneration()">&lt;&lt; Prev Generation</button>
   <button id="btn-next-generation" onclick="onNextGeneration()">Next Generation &gt;&gt;</button>
   <button id="btn-play" onclick="onPlay()">Play From Here</button>
-
-  <br>
   <br>
   <canvas id="canvas"></canvas>
 </body>
@@ -60,15 +89,16 @@
 <script>
   // constants
   const LIFE_CONFIG = {
-    lifeDigit: 1,
-    deathDigit: 0,
-    lifeSymbol: "O",
-    deathSymbol: ".",
+    lifeDigit: 1, // Must be single digit
+    deathDigit: 0,// Must be single digit
+    lifeSymbol: "O",// Must be single char
+    deathSymbol: ".",// Must be single char
   };
 
   const GENERATIONS = [];
 
   // global var
+  let factor;
   let CANVAS;
   let CONFIG;
   let GRID;
@@ -76,6 +106,8 @@
   let isErasing = false;
   let mouseDownCell; // {r, c}
   let hasLife = false;
+
+  let textareGridSymbos;
 </script>
 
 <script>
@@ -112,6 +144,49 @@
         }
       }
     });
+  }
+
+  function setupInputs() {
+    textareGridSymbols = document.getElementById("textare-grid-symbols");
+    textareGridSymbols.placeholder =
+      `OO..O
+O...O
+O..OO
+`
+  }
+
+  function onApplyGridSymbols() {
+    let text = (textareGridSymbols.value || "").trim();
+    if (!text) {
+      return;
+    }
+
+    const lifeSymbolByUser = document.getElementById("input-life-symbol").value.trim();
+    const deathSymbolByUser = document.getElementById("input-death-symbol").value.trim();
+    if (lifeSymbolByUser.length !== 1) {
+      alert("Life symbol is invalid. A single non-space character is needed. Example: O");
+      return;
+    }
+    if (deathSymbolByUser.length !== 1) {
+      alert("Death symbol is invalid. A single non-space character is needed. Example: .");
+      return;
+    }
+    if (lifeSymbolByUser === deathSymbolByUser) {
+      alert("Life and Death symbos should be different")
+      return;
+    }
+    const symbols = [lifeSymbolByUser, deathSymbolByUser];
+
+    let grid = text.split("\n")
+      .map(
+        rowOfZerosOnes => rowOfZerosOnes.split("")
+          .filter(symbol => symbol === lifeSymbolByUser || symbol === deathSymbolByUser)
+          .map(symbol => lifeSymbolByUser === symbol ? LIFE_CONFIG.lifeDigit : LIFE_CONFIG.deathDigit)
+      );
+
+    console.log(grid);
+    setupGrid(grid, factor);
+    draw();
   }
 
   function setupCanvas() {
@@ -224,21 +299,22 @@
     }
   }
 
-  function onload() {
-    console.log("Start...");
-    const params = new URLSearchParams(window.location.search);
+  function clearPrevGenerations() {
+    while (GENERATIONS.length) {
+      const prevKey = GENERATIONS.pop();
+      const prevGenStr = sessionStorage.getItem(prevKey);
+      sessionStorage.removeItem(prevKey);
+    }
+  }
 
-    let gridFromParam = gridTrim(compactStringToGrid(params.get("grid"), LIFE_CONFIG), LIFE_CONFIG.lifeDigit);
-    console.log("gridFromParam", gridFromParam);
-
-    const factor = Number.parseFloat(params.get("factor")) || 1;
-
+  function setupGrid(initialGrid, factor) {
+    clearPrevGenerations();
     CONFIG = {
       factor: factor,
       canvasWidth: 800 * factor,
       canvasHeight: 800 * factor,
-      numRows: maxNumber(40 * factor, 10, gridFromParam?.length + 10),
-      numCols: maxNumber(40 * factor, 10, gridFromParam && gridFromParam[0] && gridFromParam[0].length + 10),
+      numRows: maxNumber(40 * factor, 10, initialGrid?.length + 10),
+      numCols: maxNumber(40 * factor, 10, initialGrid && initialGrid[0] && initialGrid[0].length + 10),
       randomLifeThreshold: 0.7,
       cellBorderStyle: "#ccc",
       cellFillStyle: "#066", // LIFE cell fill color
@@ -248,13 +324,24 @@
     CONFIG.cellWidth = Math.floor(CONFIG.canvasWidth / CONFIG.numCols);
     CONFIG.cellHeight = Math.floor(CONFIG.canvasHeight / CONFIG.numRows);
 
-    GRID = gridFromParam ? gridExpand(gridFromParam, CONFIG.numRows, CONFIG.numCols) : zeros(CONFIG.numRows, CONFIG.numCols);
+    GRID = initialGrid ? gridExpand(initialGrid, CONFIG.numRows, CONFIG.numCols) : zeros(CONFIG.numRows, CONFIG.numCols);
     console.log("CONFIG: ", CONFIG);
     console.log("First Generation: ", gridToCompactString(GRID, LIFE_CONFIG));
+  }
 
+  function onload() {
+    console.log("Start...");
+    const params = new URLSearchParams(window.location.search);
+    factor = Number.parseFloat(params.get("factor")) || 1;
+    let gridFromParam = gridTrim(compactStringToGrid(params.get("grid"), LIFE_CONFIG), LIFE_CONFIG.lifeDigit);
+    console.log("gridFromParam", gridFromParam);
+
+    setupGrid(gridFromParam, factor);
+    setupInputs();
     setupCanvas();
     draw();
   }
+
 </script>
 
 </html>
