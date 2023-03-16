@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    #canvas {
+      border: 1px solid black;
+    }
+
+  </style>
+</head>
+
+<body onload="init()">
+  <!-- <textarea placeholder="1,2,3,4,5,6,7,8,9,10,11,12,13,null,null,15"></textarea> -->
+  <textarea id="input" placeholder="1,2,3,4,5,6"></textarea>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    let canvas, ctx;
+    let input;
+    let cw; // charWidth
+
+    let config = {
+      canvasWidth: 800,
+      canvasHeight: 900,
+      strokeStyle: "#666", // outline
+      fillStyle: "#34ebc6", // node backgroud color
+      font: "20px Arial",
+      rectWidth: 70,
+      rectHeight: 40,
+    }
+
+    function setCharWidth() {
+      const text = ctx.measureText("1234567890"); // TextMetrics object
+      cw = text.width / 10;
+    }
+
+    function init() {
+      canvas = document.getElementById("canvas");
+      input = document.getElementById("input");
+      ctx = canvas.getContext("2d");
+
+
+      // resize
+      canvas.width = config.canvasWidth;
+      canvas.height = config.canvasHeight;
+
+      ctx.font = config.font;
+
+      ctx.strokeRect1 = function (x, y, w, h) {
+        ctx.strokeStyle = config.strokeStyle;
+        x = parseInt(x) + 0.50;
+        y = parseInt(y) + 0.50;
+        this.strokeRect(x, y, w, h);
+      }
+
+      ctx.fillRect1 = function (x, y, w, h) {
+        ctx.fillStyle = config.fillStyle;
+        x = parseInt(x);
+        y = parseInt(y);
+        this.fillRect(x, y, w, h);
+      }
+
+      setCharWidth();
+      draw();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // circle(20, 20, 20);
+      line(100, 100, 300, 300);
+      node(100, 100, "10");
+      node(300, 300, "20");
+    }
+
+    function node(x, y, label = "") {
+      // rect(x, y, w, h);
+      circle(x, y);
+      text(x, y, label);
+    }
+
+    function circle(x, y, r = config.rectWidth / 2) {
+      ctx.fillStyle = config.fillStyle;
+      ctx.strokeStyle = config.strokeStyle;
+
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function rect(x, y, w, h) {
+      // x,y will be the center of the shape
+      ctx.fillStyle = config.fillStyle;
+      ctx.strokeStyle = config.strokeStyle;
+      ctx.fillRect1(x - w / 2, y - h / 2, w, h);
+      // ctx.strokeRect1(x, y, w, h);
+    }
+
+    function text(x, y, label = "label") {
+      ctx.fillStyle = '#000';
+      ctx.textAlign = "start";
+      ctx.textBaseline = "middle";
+      let xoffset = (label.length * cw) / 2;
+      ctx.fillText(label, x - xoffset, y);
+    }
+
+    function line(x1, y1, x2, y2) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+
+  </script>
+</body>
+
+</html>
