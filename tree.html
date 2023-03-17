@@ -15,10 +15,68 @@
 </head>
 
 <body onload="init()">
-  <!-- <textarea placeholder="1,2,3,4,5,6,7,8,9,10,11,12,13,null,null,15"></textarea> -->
+
   <textarea id="input" placeholder="1,2,3,4,5,6"></textarea>
   <canvas id="canvas"></canvas>
 
+  <script>
+    // pure
+    function getTreeHW(treeSize) {
+      if (!isFinite(treeSize)) {
+        throw new Error("treeSize should be a finite number: " + treeSize);
+      }
+      const treeHeight = Math.ceil(1 + Math.log2((treeSize + 1) / 2)); // starts 1
+      const treeWidth = Math.pow(2, treeHeight - 1);
+      return { h: treeHeight, w: treeWidth };
+    }
+
+    function hydrateTreeFully(flatNumberArray) {
+      const { w, h } = getTreeHW(flatNumberArray.length);
+
+      const fullLevels = [];
+      let flatIndex = 0;
+      let levelSize = 1;
+
+      while (fullLevels.length <= h) {
+        const level = [];
+        for (let i = 0; i < levelSize; i++) {
+          if (flatIndex + i >= flatNumberArray.length) {
+            level.push(null);
+          } else {
+            level.push(flatNumberArray[flatIndex + i]);
+          }
+        }
+        flatIndex += levelSize;
+        fullLevels.push(level);
+        levelSize *= 2;
+      }
+
+      return fullLevels;
+    }
+
+    function hydrateTreeBottomNotFull(flatNumberArray) {
+      const fullLevels = [];
+      let flatIndex = 0;
+      let levelSize = 1;
+
+      while (flatIndex < flatNumberArray.length) {
+        const level = [];
+        for (let i = 0; i < levelSize; i++) {
+          if (flatIndex + i >= flatNumberArray.length) {
+            flatIndex = flatNumberArray.length;
+            break;
+          }
+          level.push(flatNumberArray[flatIndex + i]);
+        }
+        flatIndex += levelSize;
+        fullLevels.push(level);
+        levelSize *= 2;
+      }
+
+      return fullLevels;
+    }
+
+  </script>
   <script>
     let canvas, ctx;
     let input;
@@ -29,14 +87,26 @@
       canvasHeight: 900,
       strokeStyle: "#666", // outline
       fillStyle: "#34ebc6", // node backgroud color
-      font: "20px Arial",
-      rectWidth: 70,
-      rectHeight: 40,
+      font: "20px Arial, sans-serif",
+      rectWidth: 30, //
+      rectHeight: 30,
+      circleRadius: 30, //
+      treeLevelGap: 30 * 3, // from center to center
+      treeNodeGapMin: 30 * 3, // center to center,
+      flatTree: [1, 2, 3, 4, 5, 6, 7, 8, 9]
     }
 
     function setCharWidth() {
+      ctx.font = config.font;
       const text = ctx.measureText("1234567890"); // TextMetrics object
       cw = text.width / 10;
+    }
+
+    function resetCanvas() {
+      canvas.width = config.canvasWidth;
+      canvas.height = config.canvasHeight;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
     function init() {
@@ -44,10 +114,7 @@
       input = document.getElementById("input");
       ctx = canvas.getContext("2d");
 
-
-      // resize
-      canvas.width = config.canvasWidth;
-      canvas.height = config.canvasHeight;
+      resetCanvas();
 
       ctx.font = config.font;
 
@@ -70,21 +137,74 @@
     }
 
     function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const { w, h } = getTreeHW(config.flatTree.length);
+      console.log(w, h)
 
-      // circle(20, 20, 20);
-      line(100, 100, 300, 300);
-      node(100, 100, "10");
-      node(300, 300, "20");
+      config.canvasWidth = Math.max(100, (w - 1) * config.treeNodeGapMin + config.circleRadius * 2);
+      config.canvasHeight = Math.max(100, (h - 1) * config.treeLevelGap + config.circleRadius * 2); //  + config.circleRadius * 4
+
+      resetCanvas();
+
+      drawFullTree(config.flatTree);
     }
 
-    function node(x, y, label = "") {
-      // rect(x, y, w, h);
-      circle(x, y);
-      text(x, y, label);
+    function drawFullTree(numberArray) {
+      const { h, w } = getTreeHW(numberArray.length);
+      const fullTree = hydrateTreeFully(numberArray);
+
+
+      const bottomFullWidthInPx = (w - 1) * config.treeNodeGapMin + config.circleRadius * 2;
+
+      let xoffset = config.circleRadius; // circle is drawed at the center point
+      let yoffset = config.circleRadius;
+
+      for (let levelIndex = 0; levelIndex < fullTree.length; levelIndex++) {
+        let levelWidthInPx = (fullTree[levelIndex].length - 1) * config.treeNodeGapMin + config.circleRadius * 2;
+        console.log("levelWidthInPx", levelWidthInPx, bottomFullWidthInPx);
+        for (let nodeIndex = 0; nodeIndex < fullTree[levelIndex].length; nodeIndex++) {
+          let x = xoffset + nodeIndex * config.treeNodeGapMin;
+          let y = yoffset + levelIndex * config.treeLevelGap;
+          drawNode(x, y, fullTree[levelIndex][nodeIndex]);
+        }
+      }
+
     }
 
-    function circle(x, y, r = config.rectWidth / 2) {
+    // function drawFullTree(numberArray) {
+    //   const { h, w } = getTreeHW(numberArray.length);
+    //   const fullTree = hydrateTree(numberArray);
+
+
+    //   let xoffset = 0;// config.circleRadius * 3;
+    //   let yoffset = 0;// config.circleRadius * 3;
+    //   let nodeGapBellow = 0;
+    //   // bottom up
+    //   for (let levelIndex = fullTree.length - 1; levelIndex >= 0; levelIndex--) {
+    //     let nodeGap = config.treeNodeGapMin * (fullTree.length - levelIndex);
+    //     let xoffsetLevel = xoffset + nodeGap / 2;
+    //     for (let nodeIndex = 0; nodeIndex < fullTree[levelIndex].length; nodeIndex++) {
+    //       let x = xoffsetLevel + nodeIndex * nodeGap;
+    //       let y = yoffset + levelIndex * config.treeLevelGap;
+    //       drawNode(x, y, fullTree[levelIndex][nodeIndex]);
+    //     }
+    //     nodeGapBellow = nodeGap
+    //   }
+
+    //   console.log(fullTree);
+    // }
+
+    function drawNode(x, y, numValue) {
+      // drawRect(x, y);
+      if (numValue == null || numValue == NaN || !String(numValue).trim()) {
+        drawCircleEmpty(x, y);
+        drawTextEmpty(x, y);
+      } else {
+        drawCircle(x, y);
+        drawText(x, y, numValue);
+      }
+    }
+
+    function drawCircle(x, y, r = config.circleRadius) {
       ctx.fillStyle = config.fillStyle;
       ctx.strokeStyle = config.strokeStyle;
 
@@ -94,7 +214,17 @@
       ctx.stroke();
     }
 
-    function rect(x, y, w, h) {
+    function drawCircleEmpty(x, y, r = config.circleRadius) {
+      ctx.fillStyle = "#ccc";
+      ctx.strokeStyle = "#000";
+
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function drawRect(x, y, w = config.rectWidth, h = config.rectHeight) {
       // x,y will be the center of the shape
       ctx.fillStyle = config.fillStyle;
       ctx.strokeStyle = config.strokeStyle;
@@ -102,15 +232,24 @@
       // ctx.strokeRect1(x, y, w, h);
     }
 
-    function text(x, y, label = "label") {
+    function drawTextEmpty(x, y) {
+      drawText(x, y, "---");
+    }
+
+    function drawText(x, y, label) {
       ctx.fillStyle = '#000';
       ctx.textAlign = "start";
       ctx.textBaseline = "middle";
+      ctx.font = config.font;
+
+      label = String(label);
       let xoffset = (label.length * cw) / 2;
       ctx.fillText(label, x - xoffset, y);
     }
 
-    function line(x1, y1, x2, y2) {
+
+
+    function drawLine(x1, y1, x2, y2) {
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
