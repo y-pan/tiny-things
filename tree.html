@@ -5,22 +5,40 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>Tree</title>
   <style>
+    #control {
+      margin-bottom: 10px;
+      display: flex
+    }
+
     #canvas {
-      border: 1px solid black;
+      border: 1px solid rgb(12, 92, 97);
     }
 
   </style>
 </head>
 
 <body onload="init()">
-
-  <textarea id="input" placeholder="1,2,3,4,5,6"></textarea>
+  <div id="control">
+    <textarea id="input" placeholder="1,2,3,4,5,6">1,2,3,4,5,6</textarea>
+    <button onclick="draw()">Draw</button>
+  </div>
   <canvas id="canvas"></canvas>
 
   <script>
     // pure
+    class Node {
+      constructor(value, left, right, parent, xpos, ypos) {
+        this.value = value;
+        this.left = left;
+        this.right = right;
+        this.xpos = xpos;
+        this.ypos = ypos;
+        this.parent = parent;
+      }
+    }
+
     function getTreeHW(treeSize) {
       if (!isFinite(treeSize)) {
         throw new Error("treeSize should be a finite number: " + treeSize);
@@ -30,52 +48,67 @@
       return { h: treeHeight, w: treeWidth };
     }
 
-    function hydrateTreeFully(flatNumberArray) {
-      const { w, h } = getTreeHW(flatNumberArray.length);
+    function createTree(flatNumberArray) {
+      if (!flatNumberArray?.length) return { root: null, levels: [] };
 
-      const fullLevels = [];
-      let flatIndex = 0;
-      let levelSize = 1;
+      const root = new Node(flatNumberArray[0]);
 
-      while (fullLevels.length <= h) {
-        const level = [];
-        for (let i = 0; i < levelSize; i++) {
-          if (flatIndex + i >= flatNumberArray.length) {
-            level.push(null);
-          } else {
-            level.push(flatNumberArray[flatIndex + i]);
+      let prevLevel = [root];
+      const allLevels = []; // Needed for later populating x, y pos for each nodes
+      allLevels.push([...prevLevel]);
+
+      const len = flatNumberArray.length;
+      let i = 1;
+      while (true) {
+        let nextLevel = [];
+        let hasNext = false;
+        for (let node of prevLevel) {
+          const leftChild = new Node(i >= len ? null : flatNumberArray[i]);
+          i++;
+          const rightChild = new Node(i >= len ? null : flatNumberArray[i]);
+          i++;
+          node.left = leftChild;
+          node.right = rightChild;
+          leftChild.parent = node;
+          rightChild.parent = node;
+          nextLevel.push(leftChild);
+          nextLevel.push(rightChild);
+
+          if (leftChild.value != null || rightChild.value != null) {
+            hasNext = true;
           }
         }
-        flatIndex += levelSize;
-        fullLevels.push(level);
-        levelSize *= 2;
-      }
 
-      return fullLevels;
-    }
+        allLevels.push([...nextLevel]);
 
-    function hydrateTreeBottomNotFull(flatNumberArray) {
-      const fullLevels = [];
-      let flatIndex = 0;
-      let levelSize = 1;
-
-      while (flatIndex < flatNumberArray.length) {
-        const level = [];
-        for (let i = 0; i < levelSize; i++) {
-          if (flatIndex + i >= flatNumberArray.length) {
-            flatIndex = flatNumberArray.length;
-            break;
-          }
-          level.push(flatNumberArray[flatIndex + i]);
+        if (!hasNext) {
+          break;
         }
-        flatIndex += levelSize;
-        fullLevels.push(level);
-        levelSize *= 2;
+        prevLevel = nextLevel;
       }
 
-      return fullLevels;
+      return { root, levels: allLevels };
     }
 
+    function populateXYForTreeLevels(treeLevels, xgap, ygap) { // Node[][]
+      const bottomLevel = treeLevels[treeLevels.length - 1];
+
+      let xoffset = 0;
+      let yoffset = ygap * treeLevels.length;
+
+      for (let l = treeLevels.length - 1; l >= 0; l--) {
+        // bottom
+        for (let i = 0; i < treeLevels[l].length; i++) {
+          const node = treeLevels[l][i];
+
+          node.xpos = xoffset + i * xgap;
+          node.ypos = ygap * l;
+        }
+
+        xoffset += xgap / 2;
+        xgap *= 2;
+      }
+    }
   </script>
   <script>
     let canvas, ctx;
@@ -93,7 +126,7 @@
       circleRadius: 30, //
       treeLevelGap: 30 * 3, // from center to center
       treeNodeGapMin: 30 * 3, // center to center,
-      flatTree: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+      flatTree: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,]
     }
 
     function setCharWidth() {
@@ -136,64 +169,49 @@
       draw();
     }
 
-    function draw() {
-      const { w, h } = getTreeHW(config.flatTree.length);
-      console.log(w, h)
+    function updateConfig() {
+      const inputElem = document.getElementById("input");
+      const numbersStr = String(inputElem.value || "").trim();
 
-      config.canvasWidth = Math.max(100, (w - 1) * config.treeNodeGapMin + config.circleRadius * 2);
-      config.canvasHeight = Math.max(100, (h - 1) * config.treeLevelGap + config.circleRadius * 2); //  + config.circleRadius * 4
+      const numbersArray = numbersStr.split(/[,\n]/)
+        .map(numStr => numStr.trim())
+        .filter(numStr => numStr !== "")
+        .map(numStr => parseFloat(numStr));
+
+      config.flatTree = numbersArray;
+    }
+
+    function draw() {
+      updateConfig();
+
+      const { root, levels } = createTree(config.flatTree);
+      if (!root) {
+        return;
+      }
+
+      config.canvasWidth = Math.max(100, (levels[levels.length - 1].length - 1) * config.treeNodeGapMin + config.circleRadius * 2);
+      config.canvasHeight = Math.max(100, (levels.length - 1) * config.treeLevelGap + config.circleRadius * 2); //  + config.circleRadius * 4
 
       resetCanvas();
 
-      drawFullTree(config.flatTree);
+      populateXYForTreeLevels(levels, config.treeNodeGapMin, config.treeLevelGap);
+      drawNodeRecursive(root, config.circleRadius, config.circleRadius);
     }
 
-    function drawFullTree(numberArray) {
-      const { h, w } = getTreeHW(numberArray.length);
-      const fullTree = hydrateTreeFully(numberArray);
+    function drawNodeRecursive(node, xoffset = 0, yoffset = 0) {
+      // draw lines first, so it's a the bottom of shape
+      const { left, right, xpos, ypos, value } = node;
 
+      left && drawLine(xpos + xoffset, ypos + yoffset, left.xpos + xoffset, left.ypos + yoffset);
+      right && drawLine(xpos + xoffset, ypos + yoffset, right.xpos + xoffset, right.ypos + yoffset);
 
-      const bottomFullWidthInPx = (w - 1) * config.treeNodeGapMin + config.circleRadius * 2;
+      drawNodeSingle(xpos + xoffset, ypos + yoffset, value);
 
-      let xoffset = config.circleRadius; // circle is drawed at the center point
-      let yoffset = config.circleRadius;
-
-      for (let levelIndex = 0; levelIndex < fullTree.length; levelIndex++) {
-        let levelWidthInPx = (fullTree[levelIndex].length - 1) * config.treeNodeGapMin + config.circleRadius * 2;
-        console.log("levelWidthInPx", levelWidthInPx, bottomFullWidthInPx);
-        for (let nodeIndex = 0; nodeIndex < fullTree[levelIndex].length; nodeIndex++) {
-          let x = xoffset + nodeIndex * config.treeNodeGapMin;
-          let y = yoffset + levelIndex * config.treeLevelGap;
-          drawNode(x, y, fullTree[levelIndex][nodeIndex]);
-        }
-      }
-
+      left && drawNodeRecursive(left, xoffset, yoffset);
+      right && drawNodeRecursive(right, xoffset, yoffset);
     }
 
-    // function drawFullTree(numberArray) {
-    //   const { h, w } = getTreeHW(numberArray.length);
-    //   const fullTree = hydrateTree(numberArray);
-
-
-    //   let xoffset = 0;// config.circleRadius * 3;
-    //   let yoffset = 0;// config.circleRadius * 3;
-    //   let nodeGapBellow = 0;
-    //   // bottom up
-    //   for (let levelIndex = fullTree.length - 1; levelIndex >= 0; levelIndex--) {
-    //     let nodeGap = config.treeNodeGapMin * (fullTree.length - levelIndex);
-    //     let xoffsetLevel = xoffset + nodeGap / 2;
-    //     for (let nodeIndex = 0; nodeIndex < fullTree[levelIndex].length; nodeIndex++) {
-    //       let x = xoffsetLevel + nodeIndex * nodeGap;
-    //       let y = yoffset + levelIndex * config.treeLevelGap;
-    //       drawNode(x, y, fullTree[levelIndex][nodeIndex]);
-    //     }
-    //     nodeGapBellow = nodeGap
-    //   }
-
-    //   console.log(fullTree);
-    // }
-
-    function drawNode(x, y, numValue) {
+    function drawNodeSingle(x, y, numValue) {
       // drawRect(x, y);
       if (numValue == null || numValue == NaN || !String(numValue).trim()) {
         drawCircleEmpty(x, y);
@@ -233,7 +251,7 @@
     }
 
     function drawTextEmpty(x, y) {
-      drawText(x, y, "---");
+      drawText(x, y, "null");
     }
 
     function drawText(x, y, label) {
@@ -247,15 +265,12 @@
       ctx.fillText(label, x - xoffset, y);
     }
 
-
-
     function drawLine(x1, y1, x2, y2) {
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
       ctx.stroke();
     }
-
 
   </script>
 </body>
