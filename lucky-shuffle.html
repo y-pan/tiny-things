@@ -117,6 +117,10 @@
     <div id="validation">
       <h3>Verification</h3>
       <div class="validation-row">
+        <label id="startedAt-display" class="label-verify">Started At:</label>
+        <span id="startedAt">N/A</span>
+      </div>
+      <div class="validation-row">
         <label for="input-content" class="label-verify">Content:</label>
         <textarea id="input-content" class="input-verify" value="" spellcheck="false"></textarea>
       </div>
@@ -137,6 +141,7 @@
       difficulty: 1,
       interval: 30,
       items: [],
+      startedAt: new Date()
     };
   </script>
   <script>
@@ -226,6 +231,8 @@
       const controlInputElem = document.getElementById("control-input");
       controlInputElem.value = CONFIG.items.toString();
       // controlInputElem.setAttribute("readonly", "true");
+      document.getElementById("startedAt").innerText = `Started At: ${CONFIG.startedAt?.toISOString()}`;
+
       let i = 0;
       const luckyStart = getLuckyStart(CONFIG.difficulty);
       let currentItems = [...CONFIG.items];
@@ -293,6 +300,8 @@
 
       verifyResultDom.innerText = isMatch ? "Valid - Content is credible!" : "Invalid - Content cannot be trusted!";
       verifyResultDom.style.color = isMatch ? "#008700" : "#f00";
+
+      document.getElementById("startedAt").innerText = `Started At: ${CONFIG.startedAt?.toISOString()}`;
     }
   </script>
   <script>
