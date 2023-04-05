@@ -231,7 +231,7 @@
       const controlInputElem = document.getElementById("control-input");
       controlInputElem.value = CONFIG.items.toString();
       // controlInputElem.setAttribute("readonly", "true");
-      document.getElementById("startedAt").innerText = `Started At: ${CONFIG.startedAt?.toISOString()}`;
+      document.getElementById("startedAt").innerText = CONFIG.startedAt?.toISOString();
 
       let i = 0;
       const luckyStart = getLuckyStart(CONFIG.difficulty);
