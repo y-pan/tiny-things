@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Make Points</title>
+  <style>
+    canvas {
+      border: 1px solid black;
+    }
+
+  </style>
+</head>
+
+<body onload="redrawCanvas()">
+  <canvas id="canvas" width="500" height="500"></canvas>
+  <br>
+  <label>Canvas width:</label>
+  <input id="canvas-width" type="number" min="1" value="500">
+  <br>
+  <label>Canvas height:</label>
+  <input id="canvas-height" type="number" min="1" value="500">
+  <br>
+  <textarea id="textarea" rows="10" cols="30"></textarea>
+  <br>
+  <button id="redraw-button">Redraw</button>
+
+  <script>
+    // Initialize canvas with any existing points in the textarea
+    var textarea = document.getElementById("textarea");
+    var points = textarea.value.trim().split("\n");
+    var canvas = document.getElementById("canvas");
+    var context = canvas.getContext("2d");
+    var canvasWidthInput = document.getElementById("canvas-width");
+    var canvasHeightInput = document.getElementById("canvas-height");
+    var redrawButton = document.getElementById("redraw-button");
+
+    // Redraw canvas with points from textarea
+    function redrawCanvas() {
+      // Clear canvas
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Get new canvas dimensions
+      canvas.width = canvasWidthInput.value;
+      canvas.height = canvasHeightInput.value;
+
+      // Calculate center of canvas
+      var centerX = canvas.width / 2;
+      var centerY = canvas.height / 2;
+
+      // Draw x and y axis
+      context.beginPath();
+      context.moveTo(centerX, 0);
+      context.lineTo(centerX, canvas.height);
+      context.stroke();
+
+      context.beginPath();
+      context.moveTo(0, centerY);
+      context.lineTo(canvas.width, centerY);
+      context.stroke();
+
+      // Draw point for each (x, y) coordinate
+      for (var i = 0; i < points.length; i++) {
+        var point = points[i].split(",");
+        var x = parseFloat(point[0]);
+        var y = parseFloat(point[1]);
+        context.beginPath();
+        context.arc(centerX + x, centerY - y, 5, 0, 2 * Math.PI);
+        context.fill();
+      }
+
+      // Label x and y axis
+      context.font = "16px Arial";
+      context.fillText("x", canvas.width - 10, centerY + 20);
+      context.fillText("y", centerX - 20, 20);
+    }
+
+    // Listen for clicks on the redraw button
+    redrawButton.addEventListener("click", function (event) {
+      // Update points array with textarea values
+      points = textarea.value.trim().split("\n");
+      redrawCanvas();
+    });
+
+    // Listen for clicks on the canvas
+    canvas.addEventListener("click", function (event) {
+      // Get position of click relative to center of canvas
+      var rect = canvas.getBoundingClientRect();
+      var x = event.clientX - rect.left - canvas.width / 2;
+      var y = canvas.height / 2 - (event.clientY - rect.top);
+
+      // Append (x, y) coordinates to textarea
+      textarea.value += textarea.value ? `\n${x},${y}` : `${x},${y}`;
+
+      // Redraw canvas with new point
+      points.push(x + "," + y);
+      redrawCanvas();
+    });
+  </script>
+</body>
+
+</html
