@@ -60,6 +60,7 @@
       context.stroke();
 
       // Draw point for each (x, y) coordinate
+      context.fillStyle = "#00f";
       for (var i = 0; i < points.length; i++) {
         var point = points[i].split(",");
         var x = parseFloat(point[0]);
@@ -71,6 +72,7 @@
 
       // Label x and y axis
       context.font = "16px Arial";
+      context.fillStyle = "#000";
       context.fillText("x", canvas.width - 10, centerY + 20);
       context.fillText("y", centerX - 20, 20);
     }
