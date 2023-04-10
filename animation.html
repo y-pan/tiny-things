@@ -153,19 +153,19 @@
         loadSpriteSheet(ctx, "assets/dragon3.png", 4, 2, 0.5),
         loadSpriteSheet(ctx, "assets/peron1.avif", 6, 1, 0.5),
         loadSpriteSheet(ctx, "assets/stickman.png", 3, 2, 1.5),
+        loadSpriteSheet(ctx, "assets/stickman2.png", 4, 1, 1),
       ]).then(loadedSprites => {
         sprites = loadedSprites;
         sprites[0]
-          .goto(canvas.width - 100, 20)
+          .goto(450, 50)
           .fitHeight(100);
 
         sprites[1].goto(0, 0).fitHeight(100);
         sprites[2].goto(0, 300).fitHeight(100);
         sprites[3].goto(100, 300).fitHeight(100);
         sprites[4].goto(250, 100).fitHeight(100);
-        sprites[4].fitHeight(100).fitHeight(100);
-
-        sprites[5].goto(400, 400).fitHeight(100);
+        sprites[5].goto(0, 400).fitHeight(100);
+        sprites[6].goto(300, 400).fitHeight(100);
 
         start();
       })
