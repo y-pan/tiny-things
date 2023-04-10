@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Animation</title>
+</head>
+
+<body onload="onload()">
+  <canvas id="myCanvas"></canvas>
+
+  <script>
+    class Sprite {
+
+      constructor(ctx, img, numCols, numRows, frameWidth, frameHeight, fullPlayInSeconds, name) {
+        this.id = idSeq++;
+        this.ctx = ctx;
+        this.name = name;
+        this.img = img;
+        this.numCols = numCols;
+        this.numRows = numRows;
+        this.frameHeight = frameHeight;
+        this.frameWidth = frameWidth;
+        this.fullPlayInSeconds = fullPlayInSeconds;
+
+        this.x = 0;
+        this.y = 0;
+        this.scale = 1.0;
+
+        this.totalFrames = numCols * numRows;
+
+        const fullPlayInGlobalFrames = FPS * this.fullPlayInSeconds;
+        const eachSpriteFrameWorthGlobalFrames = fullPlayInGlobalFrames / (this.totalFrames);
+        this.frameLifeSpanInDrawCounts = eachSpriteFrameWorthGlobalFrames;
+        this.currentFrameIndex = 0;
+        this.currentFrameLife = this.frameLifeSpanInDrawCounts;
+
+        this._getNextFrameIndex = this._getNextFrameIndex.bind(this);
+        this.goto = this.goto.bind(this);
+        this.draw = this.draw.bind(this);
+        this.fitWeight = this.fitWeight.bind(this);
+        this.fitHeight = this.fitHeight.bind(this);
+      }
+
+      _getNextFrameIndex() {
+        this.currentFrameLife--;
+        if (this.currentFrameLife <= 0) {
+          this.currentFrameLife = this.frameLifeSpanInDrawCounts;
+          this.currentFrameIndex++;
+          if (this.currentFrameIndex > this.totalFrames - 1) {
+            this.currentFrameIndex = 0;
+          }
+        }
+        return this.currentFrameIndex;
+      }
+
+      goto(x, y) {
+        this.x = x ?? this.x;
+        this.y = y ?? this.y;
+        return this;
+      }
+
+      fitWeight(newWeight) {
+        this.scale = newWeight / this.frameWidth;
+        return this;
+      }
+
+      fitHeight(newHeight) {
+        this.scale = newHeight / this.frameHeight;
+        return this;
+      }
+
+      draw() {
+        // console.log("drawing", this.name);
+        const index = this._getNextFrameIndex();
+        const column = index % this.numCols;
+        const row = Math.floor(index / this.numCols);
+        const srcX = column * this.frameWidth;
+        const srcY = row * this.frameHeight;
+
+        this.ctx.drawImage(this.img, srcX, srcY, this.frameWidth, this.frameHeight, this.x, this.y, this.frameWidth * this.scale, this.frameHeight * this.scale);
+        return this;
+      }
+    }
+
+    // ==== global ====
+    let FPS = 60;
+    let idSeq = 0;
+    let bottleSprite, globalDrawCount = 0;
+    let canvas, ctx;
+    let sprites = [];
+
+    function loadSpriteSheet(ctx, path, numCols, numRows, fullPlayInSeconds, name) {
+      return new Promise((resolve, reject) => {
+        let img = new Image();
+        img.src = path;
+        img.onload = () => {
+          let frameWidth = img.width / numCols;
+          let frameHeight = img.height / numRows;
+          const sprite = new Sprite(ctx, img, numCols, numRows, frameWidth, frameHeight, fullPlayInSeconds, name ?? getFileName(path));
+          resolve(sprite);
+        };
+      })
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      sprites.forEach(sprite => sprite.draw());
+
+      globalDrawCount = (globalDrawCount + 1) % Number.MAX_SAFE_INTEGER;
+    }
+
+    function getFileName(filePath) {
+      try {
+        let pathParts = filePath.split("/");
+        let fileNameWithExt = pathParts[pathParts.length - 1];
+        return fileNameWithExt.split(".")[0];
+      } catch (e) {
+        console.warn(e);
+        return "";
+      }
+    }
+
+    async function start() {
+      while (true) {
+        draw();
+        // 60 FPS => frames / 1000 ms
+        await sleep(1000 / FPS);
+      }
+    }
+
+    async function sleep(ms) {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => resolve(), ms);
+      })
+    }
+
+    function onload() {
+      canvas = document.getElementById('myCanvas');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      Promise.all([
+        loadSpriteSheet(ctx, "assets/sprite_bottle.png", 5, 2, 1),
+        loadSpriteSheet(ctx, "assets/runner.png", 5, 2, 0.6),
+        loadSpriteSheet(ctx, "assets/budwalk.png", 5, 1, 0.5),
+        loadSpriteSheet(ctx, "assets/dragon3.png", 4, 2, 0.5),
+        loadSpriteSheet(ctx, "assets/peron1.avif", 6, 1, 0.5),
+        loadSpriteSheet(ctx, "assets/stickman.png", 3, 2, 1.5),
+      ]).then(loadedSprites => {
+        sprites = loadedSprites;
+        sprites[0]
+          .goto(canvas.width - 100, 20)
+          .fitHeight(100);
+
+        sprites[1].goto(0, 0).fitHeight(100);
+        sprites[2].goto(0, 300).fitHeight(100);
+        sprites[3].goto(100, 300).fitHeight(100);
+        sprites[4].goto(250, 100).fitHeight(100);
+        sprites[4].fitHeight(100).fitHeight(100);
+
+        sprites[5].goto(400, 400).fitHeight(100);
+
+        start();
+      })
+    }
+
+  </script>
+</body>
+
+</html>

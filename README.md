@@ -15,3 +15,5 @@
 7. [Tree Visualization](https://y-pan.github.io/tiny-things/tree.html)
 
 8. [Make Points](https://y-pan.github.io/tiny-things/makePoints.html)
+
+9. [Animation](https://y-pan.github.io/tiny-things/animation.html)
