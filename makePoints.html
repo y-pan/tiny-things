@@ -12,7 +12,7 @@
   </style>
 </head>
 
-<body onload="redrawCanvas()">
+<body onload="onLoad()">
   <canvas id="canvas" width="500" height="500"></canvas>
   <br>
   <label>Canvas width:</label>
@@ -21,19 +21,63 @@
   <label>Canvas height:</label>
   <input id="canvas-height" type="number" min="1" value="500">
   <br>
-  <textarea id="textarea" rows="10" cols="30"></textarea>
+  <div style="display: flex;">
+    <textarea id="textarea" rows="10" cols="30" style="border: 1px solid blue; color: blue;"></textarea>
+    <div style="display: flex">
+      <textarea id="textarea-py" rows="10" cols="30" onclick="copyToClipboard(this)" style="border: 1px solid gray"
+        readonly></textarea>
+      <span id="notifier" hidden style="color: green">Copied</span>
+    </div>
+  </div>
   <br>
-  <button id="redraw-button">Redraw</button>
+
+  <button id="clear-button">Clear</button>
 
   <script>
     // Initialize canvas with any existing points in the textarea
-    var textarea = document.getElementById("textarea");
-    var points = textarea.value.trim().split("\n");
-    var canvas = document.getElementById("canvas");
-    var context = canvas.getContext("2d");
-    var canvasWidthInput = document.getElementById("canvas-width");
-    var canvasHeightInput = document.getElementById("canvas-height");
-    var redrawButton = document.getElementById("redraw-button");
+    let textarea = document.getElementById("textarea");
+
+    let points = textarea.value.trim().split("\n");
+    let canvas = document.getElementById("canvas");
+    let context = canvas.getContext("2d");
+    let canvasWidthInput = document.getElementById("canvas-width");
+    let canvasHeightInput = document.getElementById("canvas-height");
+    let clearButton = document.getElementById("clear-button");
+
+    function displayPointsInDifferentFormats() {
+      const srcStr = document.getElementById("textarea").value.trim();
+      const textareaPy = document.getElementById("textarea-py");
+      textareaPy.value = "";
+
+      if (!srcStr) return;
+
+      const pointsSrc = srcStr.split("\n")
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(xyCsvLine => xyCsvLine.split(",").map(numStr => parseFloat(numStr)));
+
+      if (textareaPy) {
+        textareaPy.value = "[\n" + pointsSrc.reduce((acc, xy) => acc + `  [${xy[0]},${xy[1]}],\n`, "") + "]";
+      }
+    }
+
+
+    function copyToClipboard(element) {
+      element.select();
+      document.execCommand("copy");
+      notifyCopied();
+    }
+
+    function notifyCopied() {
+      let notifier = document.getElementById("notifier");
+      notifier.innerText = "Copied";
+      notifier.style.display = "block";
+      setTimeout(() => notifier.style.display = "none", 2000);
+    }
+
+    function onLoad() {
+      redrawCanvas();
+    }
 
     // Redraw canvas with points from textarea
     function redrawCanvas() {
@@ -45,8 +89,8 @@
       canvas.height = canvasHeightInput.value;
 
       // Calculate center of canvas
-      var centerX = canvas.width / 2;
-      var centerY = canvas.height / 2;
+      let centerX = canvas.width / 2;
+      let centerY = canvas.height / 2;
 
       // Draw x and y axis
       context.beginPath();
@@ -61,10 +105,10 @@
 
       // Draw point for each (x, y) coordinate
       context.fillStyle = "#00f";
-      for (var i = 0; i < points.length; i++) {
-        var point = points[i].split(",");
-        var x = parseFloat(point[0]);
-        var y = parseFloat(point[1]);
+      for (let i = 0; i < points.length; i++) {
+        let point = points[i].split(",");
+        let x = parseFloat(point[0]);
+        let y = parseFloat(point[1]);
         context.beginPath();
         context.arc(centerX + x, centerY - y, 5, 0, 2 * Math.PI);
         context.fill();
@@ -75,21 +119,29 @@
       context.fillStyle = "#000";
       context.fillText("x", canvas.width - 10, centerY + 20);
       context.fillText("y", centerX - 20, 20);
+
+      displayPointsInDifferentFormats();
     }
 
-    // Listen for clicks on the redraw button
-    redrawButton.addEventListener("click", function (event) {
-      // Update points array with textarea values
-      points = textarea.value.trim().split("\n");
+    // Listeners
+
+    clearButton.addEventListener("click", function (event) {
+      textarea.value = "";
+      points = [];
       redrawCanvas();
     });
+    // redrawButton.addEventListener("click", function (event) {
+    //   // Update points array with textarea values
+    //   points = textarea.value.trim().split("\n");
+    //   redrawCanvas();
+    // });
 
     // Listen for clicks on the canvas
     canvas.addEventListener("click", function (event) {
       // Get position of click relative to center of canvas
-      var rect = canvas.getBoundingClientRect();
-      var x = event.clientX - rect.left - canvas.width / 2;
-      var y = canvas.height / 2 - (event.clientY - rect.top);
+      let rect = canvas.getBoundingClientRect();
+      let x = event.clientX - rect.left - canvas.width / 2;
+      let y = canvas.height / 2 - (event.clientY - rect.top);
 
       // Append (x, y) coordinates to textarea
       textarea.value += textarea.value ? `\n${x},${y}` : `${x},${y}`;
@@ -98,6 +150,7 @@
       points.push(x + "," + y);
       redrawCanvas();
     });
+
   </script>
 </body>
 
