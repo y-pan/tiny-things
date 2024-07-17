@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Make Points</title>
+  <style>
+    canvas {
+      border: 1px solid black;
+    }
+
+  </style>
+</head>
+
+<body onload="onLoad()">
+  <canvas id="canvas" width="500" height="500"></canvas>
+  <br>
+  <label>Canvas width:</label>
+  <input id="canvas-width" type="number" min="1" value="500">
+  <br>
+  <label>Canvas height:</label>
+  <input id="canvas-height" type="number" min="1" value="500">
+  <br>
+  <label>Input Label:</label>
+  <input id="input-label" type="number" min="0" value="0">
+  <br>
+
+  <div style="display: flex;">
+    <textarea id="textarea-points-source" rows="10" cols="30" style="border: 1px solid blue; color: blue;"></textarea>
+    <div style="display: flex">
+      <textarea id="textarea-points-py" rows="10" cols="30" onclick="copyToClipboard(this)" style="border: 1px solid gray"
+        readonly></textarea>
+      <span id="notifier" hidden style="color: green">Copied</span>
+    </div>
+  </div>
+  <br>
+
+  <button id="clear-button" style="color:red;">Clear</button>
+  <button id="redraw-button" style="color:blue;">Redraw</button>
+  <div>
+    <label>Color lists:</label> <br>
+    <textarea id="textarea-colors" rows="10" cols="10"
+    >#ff0000, #ffff00, #00cc00, #0099cc, #3333ff, #ff00ff</textarea>
+  </div>
+  <script>
+    function getColors() {
+      let colors = [];
+      let colorLines = document.getElementById("textarea-colors").value.split("\n");
+      for (let colorLine of colorLines) {
+        let colorsOfLine = colorLine.split(",");
+        for (let col of colorsOfLine) {
+          if (col) {
+            colors.push(col)
+          }
+        }
+      }
+      return colors;
+    }
+    function textareaTextToPoints() {
+      let pointsSrc = document.getElementById("textarea-points-source").value.trim();
+      if (!pointsSrc) {
+        return [];
+      }
+      let pointsLines = pointsSrc.split("\n");
+      let points = [];
+      for (let line of pointsLines) {
+        let [x, y, label] = line.split(",");
+        points.push({x: parseFloat(x), y: parseFloat(y), label: parseInt(label)});
+      }
+      return points;
+    }
+  </script>
+  <script>
+    // Initialize canvas with any existing points in the textarea
+    let POINTS = textareaTextToPoints();
+
+    let canvas = document.getElementById("canvas");
+    let context = canvas.getContext("2d");
+    let canvasWidthInput = document.getElementById("canvas-width");
+    let canvasHeightInput = document.getElementById("canvas-height");
+    let clearButton = document.getElementById("clear-button");
+    let redrawButton = document.getElementById("redraw-button");
+
+    function displayPointsInDifferentFormats() {
+      const textareaPy = document.getElementById("textarea-points-py");
+      textareaPy.value = "";
+
+      if (!POINTS.length) return;
+
+      if (textareaPy) {
+        textareaPy.value = "[\n" + POINTS.reduce((acc, {x, y, label}) => acc + `  [${x},${y},${label}],\n`, "") + "]";
+      }
+    }
+
+
+    function copyToClipboard(element) {
+      element.select();
+      document.execCommand("copy");
+      notifyCopied();
+    }
+
+    function notifyCopied() {
+      let notifier = document.getElementById("notifier");
+      notifier.innerText = "Copied";
+      notifier.style.display = "block";
+      setTimeout(() => notifier.style.display = "none", 2000);
+    }
+
+    function onLoad() {
+      redrawCanvas();
+    }
+
+    // Redraw canvas with points from textarea
+    function redrawCanvas() {
+      // Clear canvas
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Get new canvas dimensions
+      canvas.width = canvasWidthInput.value;
+      canvas.height = canvasHeightInput.value;
+
+      // Calculate center of canvas
+      let centerX = canvas.width / 2;
+      let centerY = canvas.height / 2;
+
+      // Draw x and y axis
+      context.beginPath();
+      context.moveTo(centerX, 0);
+      context.lineTo(centerX, canvas.height);
+      context.stroke();
+
+      context.beginPath();
+      context.moveTo(0, centerY);
+      context.lineTo(canvas.width, centerY);
+      context.stroke();
+
+      // Draw point for each (x, y) coordinate
+      // context.fillStyle = "#00f";
+      let colors = getColors();
+
+      for (let i = 0; i < POINTS.length; i++) {
+        
+        let {x, y, label} = POINTS[i];
+        context.fillStyle = colors[label % colors.length] || "#00f";
+        context.beginPath();
+        context.arc(centerX + x, centerY - y, 5, 0, 2 * Math.PI);
+        context.fill();
+      }
+
+      // Label x and y axis
+      context.font = "16px Arial";
+      context.fillStyle = "#000";
+      context.fillText("x", canvas.width - 10, centerY + 20);
+      context.fillText("y", centerX - 20, 20);
+
+      displayPointsInDifferentFormats();
+    }
+
+    // Listeners
+
+    clearButton.addEventListener("click", function (event) {
+      let yesToClear = confirm("R u sure clearing your data?");
+      if (yesToClear) {
+        textareaPointsSource.value = "";
+        points = [];
+        redrawCanvas();
+      }
+    });
+    redrawButton.addEventListener("click", function (event) {
+      redrawCanvas();
+    });
+
+    // Listen for clicks on the canvas
+    canvas.addEventListener("click", function (event) {
+      // Get position of click relative to center of canvas
+      let textareaPointsSource = document.getElementById("textarea-points-source");
+      let labelValue = document.getElementById("input-label").value;
+      let rect = canvas.getBoundingClientRect();
+      let x = event.clientX - rect.left - canvas.width / 2;
+      let y = canvas.height / 2 - (event.clientY - rect.top);
+
+      // Append (x, y) coordinates to textarea
+      textareaPointsSource.value += textareaPointsSource.value ? `\n${x},${y},${labelValue}` : `${x},${y},${labelValue}`;
+
+      // Redraw canvas with new point
+      POINTS.push({x, y, label: labelValue});
+      redrawCanvas();
+    });
+  </script>
+</body>
+
+</html>
