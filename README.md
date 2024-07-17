@@ -16,4 +16,6 @@
 
 8. [Make Points](https://y-pan.github.io/tiny-things/makePoints.html)
 
-9. [Animation](https://y-pan.github.io/tiny-things/animation.html)
+9. [Make Points Labeled](https://y-pan.github.io/tiny-things/makePointsLabeled.html)
+
+10. [Animation](https://y-pan.github.io/tiny-things/animation.html)
