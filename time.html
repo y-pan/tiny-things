@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timezone Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2em;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-convert {
+            background: #667eea;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-convert:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-now {
+            background: #764ba2;
+            color: white;
+        }
+
+        .btn-now:hover {
+            background: #5d3a7e;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(118, 75, 162, 0.4);
+        }
+
+        .timezones {
+            display: grid;
+            gap: 15px;
+            /* transition: opacity 0.2s ease-out, transform 0.2s ease-out; */
+        }
+
+        .timezone-item {
+            background: #f8f9fa;
+            padding: 20px 20px 20px 45px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s, opacity 0.3s ease-out;
+            animation: fadeInScale 0.5s ease-out;
+            cursor: move;
+            position: relative;
+        }
+
+        .timezone-item:hover {
+            transform: translateX(4px);
+        }
+
+        .timezone-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .timezone-item.drag-over {
+            border-top: 3px solid #667eea;
+            /* border-top: 3px solid red; */
+        }
+
+        .timezone-item::before {
+            content: '⋮⋮';
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 1.2em;
+            letter-spacing: -2px;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+
+        .timezone-item:hover::before {
+            opacity: 1;
+        }
+
+        @keyframes fadeInScale {
+            0% {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .timezone-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .timezone-time {
+            color: #667eea;
+            font-size: 1.3em;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        .timezone-offset {
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 4px;
+        }
+
+        .error {
+            background: #fee;
+            border: 2px solid #fcc;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .help-text {
+            color: #888;
+            font-size: 0.85em;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌍 Timezone Converter</h1>
+        
+        <div class="input-section">
+            <label for="timeInput">Enter Time (UTC or with timezone offset):</label>
+            <input 
+                type="text" 
+                id="timeInput" 
+                value="2025-11-02T15:20:35.865922499Z"
+                placeholder="e.g., 2025-11-02T15:20:35.865922499Z or 2025-11-02T15:20:35+05:00"
+            >
+            <div class="help-text">
+                Supports ISO 8601 format: UTC (ending with Z) or with timezone offset (±HH:MM)
+            </div>
+            <div class="button-group">
+                <button class="btn-convert" onclick="convertTime()">Convert</button>
+                <button class="btn-now" onclick="setCurrentTime()">Now (UTC)</button>
+            </div>
+        </div>
+
+        <div id="errorMessage"></div>
+
+        <div class="timezones" id="timezonesContainer">
+            <!-- Timezone displays will be generated here -->
+        </div>
+    </div>
+
+    <script>
+        const timezoneData = [
+            { name: 'UTC', tz: 'UTC' },
+            { name: 'Toronto', tz: 'America/Toronto' },
+            { name: 'Vancouver', tz: 'America/Vancouver' },
+            { name: 'Poland', tz: 'Europe/Warsaw' },
+            { name: 'Beijing', tz: 'Asia/Shanghai' },
+            { name: 'Tokyo', tz: 'Asia/Tokyo' }
+        ];
+
+        // Load order from URL params or use default order
+        function getTimezoneOrder() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderParam = urlParams.get('order');
+            
+            if (orderParam) {
+                try {
+                    const order = orderParam.split(',');
+                    // Validate order and filter invalid indices
+                    const validOrder = order
+                        .map(idx => parseInt(idx))
+                        .filter(idx => !isNaN(idx) && idx >= 0 && idx < timezoneData.length)
+                        .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
+                    
+                    if (validOrder.length === timezoneData.length) {
+                        return validOrder.map(idx => timezoneData[idx]);
+                    }
+                } catch (e) {
+                    console.error('Error parsing order from URL:', e);
+                }
+            }
+            
+            // Default order
+            return [...timezoneData];
+        }
+
+        // Save order to URL params
+        function saveTimezoneOrder(timezones) {
+            const order = timezones.map(tz => timezoneData.findIndex(t => t.tz === tz.tz));
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('order', order.join(','));
+            
+            const newUrl = window.location.pathname + '?' + urlParams.toString();
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        // Get ordered timezones
+        let timezones = getTimezoneOrder();
+
+        // Setup drag and drop handlers for timezone items
+        function setupDragAndDrop() {
+            const items = document.querySelectorAll('.timezone-item');
+            let draggedIndex = null;
+            
+            items.forEach((item, index) => {
+                item.addEventListener('dragstart', (e) => {
+                    draggedIndex = parseInt(item.dataset.index);
+                    item.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', item.innerHTML);
+                });
+                
+                item.addEventListener('dragend', (e) => {
+                    item.classList.remove('dragging');
+                    items.forEach(i => i.classList.remove('drag-over'));
+                });
+                
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    
+                    const draggedOverIndex = parseInt(item.dataset.index);
+                    if (draggedIndex !== null && draggedIndex !== draggedOverIndex) {
+                        items.forEach(i => i.classList.remove('drag-over'));
+                        item.classList.add('drag-over');
+                    }
+                });
+                
+                item.addEventListener('dragleave', (e) => {
+                    item.classList.remove('drag-over');
+                });
+                
+                item.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    item.classList.remove('drag-over');
+                    
+                    const droppedIndex = parseInt(item.dataset.index);
+                    
+                    if (draggedIndex !== null && draggedIndex !== droppedIndex) {
+                        // Reorder timezones array
+                        const draggedTz = timezones[draggedIndex];
+                        timezones.splice(draggedIndex, 1);
+                        timezones.splice(droppedIndex, 0, draggedTz);
+                        
+                        // Save new order to URL
+                        saveTimezoneOrder(timezones);
+                        
+                        // Re-render with new order
+                        convertTime();
+                    }
+                    
+                    draggedIndex = null;
+                });
+            });
+        }
+
+        function setCurrentTime() {
+            const now = new Date();
+            const utcString = now.toISOString();
+            document.getElementById('timeInput').value = utcString;
+            convertTime();
+        }
+
+        function convertTime() {
+            const input = document.getElementById('timeInput').value.trim();
+            const errorDiv = document.getElementById('errorMessage');
+            const container = document.getElementById('timezonesContainer');
+
+            errorDiv.innerHTML = '';
+
+            if (!input) {
+                errorDiv.innerHTML = '<div class="error">Please enter a time.</div>';
+                container.innerHTML = '';
+                container.style.opacity = '1';
+                container.style.transform = 'scale(1)';
+                return;
+            }
+
+            let date;
+            let inputNanoseconds = null;
+            try {
+                // Extract nanoseconds from input if present (since Date only preserves milliseconds)
+                const fractionalMatch = input.match(/\.(\d+)([Z+\-]|$)/);
+                if (fractionalMatch) {
+                    const fractionalPart = fractionalMatch[1];
+                    // Pad to 9 digits (nanoseconds) if shorter
+                    inputNanoseconds = fractionalPart.padEnd(9, '0').substring(0, 9);
+                }
+                
+                // Try to parse the input as ISO 8601 format
+                date = new Date(input);
+                
+                if (isNaN(date.getTime())) {
+                    throw new Error('Invalid date');
+                }
+            } catch (e) {
+                errorDiv.innerHTML = '<div class="error">Invalid time format. Please use ISO 8601 format (e.g., 2025-11-02T15:20:35.865922499Z or 2025-11-02T15:20:35+05:00)</div>';
+                container.innerHTML = '';
+                container.style.opacity = '1';
+                container.style.transform = 'scale(1)';
+                return;
+            }
+
+            // Fade out existing content
+            container.style.opacity = '0';
+            container.style.transform = 'scale(0.98)';
+            
+            // After fade out, update content and fade in
+            setTimeout(() => {
+                container.innerHTML = timezones.map((tz, index) => {
+                const formatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone: tz.tz,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    fractionalSecondDigits: 3,
+                    hour12: false
+                });
+
+                const parts = formatter.formatToParts(date);
+                
+                // Extract fractional seconds: use input nanoseconds if available, otherwise use formatter's milliseconds
+                let fractionalSeconds;
+                if (inputNanoseconds) {
+                    fractionalSeconds = inputNanoseconds;
+                } else {
+                    const milliseconds = parts.find(p => p.type === 'fractionalSecond')?.value || '000';
+                    fractionalSeconds = milliseconds.padEnd(9, '0');
+                }
+                
+                // Build the formatted time string
+                const dateStr = `${parts.find(p => p.type === 'year').value}-${parts.find(p => p.type === 'month').value}-${parts.find(p => p.type === 'day').value}`;
+                const timeStr = `${parts.find(p => p.type === 'hour').value}:${parts.find(p => p.type === 'minute').value}:${parts.find(p => p.type === 'second').value}.${fractionalSeconds}`;
+                
+                // Get timezone offset for this specific date/time
+                let offset = 'UTC';
+                if (tz.tz !== 'UTC') {
+                    // Get UTC date components
+                    const utcYear = date.getUTCFullYear();
+                    const utcMonth = date.getUTCMonth();
+                    const utcDate = date.getUTCDate();
+                    const utcHour = date.getUTCHours();
+                    const utcMin = date.getUTCMinutes();
+                    
+                    // Get timezone date components using formatter
+                    const tzFormatter = new Intl.DateTimeFormat('en-US', {
+                        timeZone: tz.tz,
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+                    
+                    const tzParts = tzFormatter.formatToParts(date);
+                    const tzYear = parseInt(tzParts.find(p => p.type === 'year').value);
+                    const tzMonth = parseInt(tzParts.find(p => p.type === 'month').value) - 1;
+                    const tzDay = parseInt(tzParts.find(p => p.type === 'day').value);
+                    const tzHour = parseInt(tzParts.find(p => p.type === 'hour').value);
+                    const tzMin = parseInt(tzParts.find(p => p.type === 'minute').value);
+                    
+                    // Create date objects for comparison (treating the timezone time as if it were UTC)
+                    const utcAsDate = new Date(Date.UTC(utcYear, utcMonth, utcDate, utcHour, utcMin));
+                    const tzAsDate = new Date(Date.UTC(tzYear, tzMonth, tzDay, tzHour, tzMin));
+                    
+                    // Calculate offset: if tz time is later in the day (or earlier due to date change),
+                    // the offset is positive (ahead of UTC)
+                    const offsetMs = tzAsDate.getTime() - utcAsDate.getTime();
+                    const offsetMinutes = Math.round(offsetMs / (1000 * 60));
+                    
+                    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+                    const offsetMins = Math.abs(offsetMinutes) % 60;
+                    const sign = offsetMinutes >= 0 ? '+' : '-';
+                    offset = `UTC${sign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
+                }
+
+                return `
+                    <div class="timezone-item" draggable="true" data-index="${index}">
+                        <div class="timezone-name">${tz.name}</div>
+                        <div class="timezone-time">${dateStr}T${timeStr}</div>
+                        <div class="timezone-offset">${offset}</div>
+                    </div>
+                `;
+            }).join('');
+                
+                // Fade in new content
+                requestAnimationFrame(() => {
+                    container.style.opacity = '1';
+                    container.style.transform = 'scale(1)';
+                    
+                    // Add drag and drop handlers after items are rendered
+                    setupDragAndDrop();
+                });
+            }, 150); // Small delay for fade out
+        }
+
+        // Allow Enter key to trigger conversion
+        document.getElementById('timeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                convertTime();
+            }
+        });
+
+        // Auto-convert when page loads if there's a value in the input
+        window.addEventListener('load', function() {
+            const input = document.getElementById('timeInput').value.trim();
+            if (input) {
+                convertTime();
+            }
+        });
+    </script>
+</body>
+</html>
