@@ -369,7 +369,7 @@
     </div>
 
     <script>
-        const timezoneData = [
+        const TIMEZONE_LIST = [
             { name: 'UTC', tz: 'UTC' },
             { name: 'Toronto', tz: 'America/Toronto' },
             { name: 'Vancouver', tz: 'America/Vancouver' },
@@ -387,7 +387,7 @@
                 try {
                     const order = orderParam.split(',');
                     // Create a map of timezone identifiers to timezone objects for quick lookup
-                    const tzMap = new Map(timezoneData.map(tz => [tz.tz, tz]));
+                    const tzMap = new Map(TIMEZONE_LIST.map(tz => [tz.tz, tz]));
                     
                     // Validate and map timezone names to timezone objects
                     const validOrder = order
@@ -396,7 +396,7 @@
                         .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
                     
                     // If we have all timezones in the order, use it; otherwise fall back to default
-                    if (validOrder.length === timezoneData.length) {
+                    if (validOrder.length === TIMEZONE_LIST.length) {
                         return validOrder.map(tzName => tzMap.get(tzName));
                     }
                 } catch (e) {
@@ -405,7 +405,7 @@
             }
             
             // Default order
-            return [...timezoneData];
+            return [...TIMEZONE_LIST];
         }
 
         // Save order to URL params
@@ -436,11 +436,11 @@
         // Ensure local timezone is in timezoneData
         function ensureLocalTimezone() {
             const localTz = getLocalTimezone();
-            const exists = timezoneData.some(tz => tz.tz === localTz);
+            const exists = TIMEZONE_LIST.some(tz => tz.tz === localTz);
             
             if (!exists && localTz !== 'UTC') {
                 // Add local timezone to timezoneData
-                timezoneData.push({
+                TIMEZONE_LIST.push({
                     name: localTz,
                     tz: localTz
                 });
@@ -453,7 +453,7 @@
         function populateTimezoneSelector() {
             const select = document.getElementById('genTimezone');
             select.innerHTML = '';
-            timezoneData.forEach(tz => {
+            TIMEZONE_LIST.forEach(tz => {
                 const option = document.createElement('option');
                 option.value = tz.tz;
                 option.textContent = tz.name;
