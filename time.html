@@ -293,17 +293,17 @@
         
         <div class="input-section">
             <label for="timeInput">Enter Time (UTC or with timezone offset):</label>
-            <input 
-                type="text" 
-                id="timeInput" 
-                placeholder="e.g., 2025-11-02T15:20:35.865922499Z or 2025-11-02T15:20:35+05:00"
-            >
+            <div style="display: flex; flex-direction: row; gap: 10px;">
+                <input 
+                    type="text" 
+                    id="timeInput" 
+                    placeholder="e.g., 2025-11-02T15:20:35.865922499Z or 2025-11-02T15:20:35+05:00"
+                >
+                <button class="btn-convert" onclick="convertTime()">Convert</button>
+            </div>
             <div class="help-text">
                 Supports ISO 8601 format: UTC (ending with Z) or with timezone offset (±HH:MM)
             </div>
-            <!-- <div class="button-group">
-                <button class="btn-convert" onclick="convertTime()">Convert</button>
-            </div> -->
             <div class="button-group-generate-time">
                 <label>Time generators: </label>
                 <button class="btn-now" onclick="setCurrentTime()" style="margin-bottom: 15px;">Now</button>
@@ -462,9 +462,8 @@
         }
 
         // Populate form with current local time
-        function populateFormWithLocalTime() {
+        function populateFormWithLocalTime(now = new Date()) {
             const localTz = ensureLocalTimezone();
-            const now = new Date();
             
             // Format current time in local timezone
             const formatter = new Intl.DateTimeFormat('en-US', {
@@ -560,8 +559,7 @@
             });
         }
 
-        function setCurrentTime() {
-            const now = new Date();
+        function setCurrentTime(now = new Date()) {
             const utcString = now.toISOString();
             document.getElementById('timeInput').value = utcString;
             convertTime();
@@ -924,11 +922,12 @@
             // Populate timezone selector (now includes local timezone if it was added)
             populateTimezoneSelector();
             
-            // Populate form with current local time
-            populateFormWithLocalTime();
-            
-            // Set main input to current UTC time
-            setCurrentTime();
+            const now = new Date();
+
+            // Populate form with current time
+            populateFormWithLocalTime(now);
+            // Set main input to current time
+            setCurrentTime(now);
         });
     </script>
 </body>
