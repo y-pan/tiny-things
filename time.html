@@ -242,14 +242,18 @@
             if (orderParam) {
                 try {
                     const order = orderParam.split(',');
-                    // Validate order and filter invalid indices
+                    // Create a map of timezone identifiers to timezone objects for quick lookup
+                    const tzMap = new Map(timezoneData.map(tz => [tz.tz, tz]));
+                    
+                    // Validate and map timezone names to timezone objects
                     const validOrder = order
-                        .map(idx => parseInt(idx))
-                        .filter(idx => !isNaN(idx) && idx >= 0 && idx < timezoneData.length)
+                        .map(tzName => tzName.trim())
+                        .filter(tzName => tzMap.has(tzName)) // Only include valid timezone identifiers
                         .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
                     
+                    // If we have all timezones in the order, use it; otherwise fall back to default
                     if (validOrder.length === timezoneData.length) {
-                        return validOrder.map(idx => timezoneData[idx]);
+                        return validOrder.map(tzName => tzMap.get(tzName));
                     }
                 } catch (e) {
                     console.error('Error parsing order from URL:', e);
@@ -262,7 +266,8 @@
 
         // Save order to URL params
         function saveTimezoneOrder(timezones) {
-            const order = timezones.map(tz => timezoneData.findIndex(t => t.tz === tz.tz));
+            // Save timezone identifiers instead of indices
+            const order = timezones.map(tz => tz.tz);
             const urlParams = new URLSearchParams(window.location.search);
             urlParams.set('order', order.join(','));
             
