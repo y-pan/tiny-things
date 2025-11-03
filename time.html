@@ -62,6 +62,11 @@
             border-color: #667eea;
         }
 
+        hr {
+            margin: 10px 0;
+            border: 1px solid #e0e0e0;
+        }
+
         .button-group {
             display: flex;
             gap: 10px;
@@ -101,6 +106,68 @@
             box-shadow: 0 4px 12px rgba(118, 75, 162, 0.4);
         }
 
+        .button-group-generate-time {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
+        .button-group-generate-time h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .time-generator-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .time-generator-form label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .time-generator-form input,
+        .time-generator-form select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .time-generator-form input:focus,
+        .time-generator-form select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .time-generator-form .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .btn-generate {
+            background: #48bb78;
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-generate:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+        }
+
         .timezones {
             display: grid;
             gap: 15px;
@@ -108,14 +175,35 @@
         }
 
         .timezone-item {
-            background: #f8f9fa;
-            padding: 20px 20px 20px 45px;
             border-radius: 8px;
-            border-left: 4px solid #667eea;
+            padding: 4px;
             transition: transform 0.2s, opacity 0.3s ease-out;
             animation: fadeInScale 0.5s ease-out;
             cursor: move;
             position: relative;
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .timezone-item-inner {
+            background: white;
+            padding: 20px 20px 20px 45px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            position: relative;
+            flex: 1;
+            min-width: 0; /* Allows flex item to shrink below content size */
+        }
+
+        .day-night-indicator {
+            width: 33.333%;
+            min-width: 100px;
+            border-radius: 6px;
+            flex-shrink: 0;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1);
+            transition: opacity 0.3s ease-out;
         }
 
         .timezone-item:hover {
@@ -129,10 +217,9 @@
 
         .timezone-item.drag-over {
             border-top: 3px solid #667eea;
-            /* border-top: 3px solid red; */
         }
 
-        .timezone-item::before {
+        .timezone-item-inner::before {
             content: '⋮⋮';
             position: absolute;
             left: 8px;
@@ -144,8 +231,8 @@
             opacity: 0.5;
             transition: opacity 0.2s;
         }
-
-        .timezone-item:hover::before {
+        
+        .timezone-item:hover .timezone-item-inner::before {
             opacity: 1;
         }
 
@@ -165,19 +252,23 @@
             color: #333;
             margin-bottom: 8px;
             font-size: 1.1em;
+            transition: color 0.3s ease-out;
         }
+
 
         .timezone-time {
             color: #667eea;
             font-size: 1.3em;
             font-weight: 600;
             font-family: 'Courier New', monospace;
+            transition: color 0.3s ease-out;
         }
 
         .timezone-offset {
             color: #888;
             font-size: 0.9em;
             margin-top: 4px;
+            transition: color 0.3s ease-out;
         }
 
         .error {
@@ -205,15 +296,68 @@
             <input 
                 type="text" 
                 id="timeInput" 
-                value="2025-11-02T15:20:35.865922499Z"
                 placeholder="e.g., 2025-11-02T15:20:35.865922499Z or 2025-11-02T15:20:35+05:00"
             >
             <div class="help-text">
                 Supports ISO 8601 format: UTC (ending with Z) or with timezone offset (±HH:MM)
             </div>
-            <div class="button-group">
+            <!-- <div class="button-group">
                 <button class="btn-convert" onclick="convertTime()">Convert</button>
-                <button class="btn-now" onclick="setCurrentTime()">Now (UTC)</button>
+            </div> -->
+            <div class="button-group-generate-time">
+                <label>Time generators: </label>
+                <button class="btn-now" onclick="setCurrentTime()" style="margin-bottom: 15px;">Now</button>
+                <hr/>
+                <div class="time-generator-form">
+                    <div class="form-group">
+                        <label for="genYear">Year</label>
+                        <input type="number" id="genYear" min="1900" value="2025">
+                    </div>
+                    <div class="form-group">
+                        <label for="genMonth">Month</label>
+                        <select id="genMonth">
+                            <option value="01">January</option>
+                            <option value="02">February</option>
+                            <option value="03">March</option>
+                            <option value="04">April</option>
+                            <option value="05">May</option>
+                            <option value="06">June</option>
+                            <option value="07">July</option>
+                            <option value="08">August</option>
+                            <option value="09">September</option>
+                            <option value="10">October</option>
+                            <option value="11" selected>November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="genDay">Day</label>
+                        <input type="number" id="genDay" min="1" max="31" value="2">
+                    </div>
+                    <div class="form-group">
+                        <label for="genHour">Hour (24-hour)</label>
+                        <input type="number" id="genHour" min="0" max="23" value="15">
+                    </div>
+                    <div class="form-group">
+                        <label for="genMinute">Minute</label>
+                        <input type="number" id="genMinute" min="0" max="59" value="20">
+                    </div>
+                    <div class="form-group">
+                        <label for="genSecond">Second</label>
+                        <input type="number" id="genSecond" min="0" max="59" value="35">
+                    </div>
+                    <div class="form-group">
+                        <label for="genMillisecond">Millisecond</label>
+                        <input type="number" id="genMillisecond" min="0" max="999" value="0" placeholder="0-999">
+                    </div>
+                    <div class="form-group">
+                        <label for="genTimezone">Timezone</label>
+                        <select id="genTimezone">
+                            <!-- Options will be populated by JavaScript -->
+                        </select>
+                    </div>
+                </div>
+                <button class="btn-generate" onclick="generateTimeFromForm()">Generate</button>
             </div>
         </div>
 
@@ -278,6 +422,87 @@
         // Get ordered timezones
         let timezones = getTimezoneOrder();
 
+        // Get user's local timezone
+        function getLocalTimezone() {
+            try {
+                const formatter = new Intl.DateTimeFormat();
+                const resolvedOptions = formatter.resolvedOptions();
+                return resolvedOptions.timeZone || 'UTC';
+            } catch (e) {
+                return 'UTC';
+            }
+        }
+
+        // Ensure local timezone is in timezoneData
+        function ensureLocalTimezone() {
+            const localTz = getLocalTimezone();
+            const exists = timezoneData.some(tz => tz.tz === localTz);
+            
+            if (!exists && localTz !== 'UTC') {
+                // Add local timezone to timezoneData
+                timezoneData.push({
+                    name: localTz,
+                    tz: localTz
+                });
+            }
+            
+            return localTz;
+        }
+
+        // Populate timezone selector from timezoneData
+        function populateTimezoneSelector() {
+            const select = document.getElementById('genTimezone');
+            select.innerHTML = '';
+            timezoneData.forEach(tz => {
+                const option = document.createElement('option');
+                option.value = tz.tz;
+                option.textContent = tz.name;
+                select.appendChild(option);
+            });
+        }
+
+        // Populate form with current local time
+        function populateFormWithLocalTime() {
+            const localTz = ensureLocalTimezone();
+            const now = new Date();
+            
+            // Format current time in local timezone
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: localTz,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                fractionalSecondDigits: 3,
+                hour12: false
+            });
+            
+            const parts = formatter.formatToParts(now);
+            const year = parts.find(p => p.type === 'year').value;
+            const month = parts.find(p => p.type === 'month').value;
+            const day = parts.find(p => p.type === 'day').value;
+            const hour = parts.find(p => p.type === 'hour').value;
+            const minute = parts.find(p => p.type === 'minute').value;
+            const second = parts.find(p => p.type === 'second').value;
+            const fractionalSecond = parts.find(p => p.type === 'fractionalSecond')?.value || '000';
+            const millisecond = fractionalSecond.substring(0, 3);
+            
+            // Populate form fields
+            document.getElementById('genYear').value = year;
+            document.getElementById('genMonth').value = month;
+            document.getElementById('genDay').value = day;
+            document.getElementById('genHour').value = hour;
+            document.getElementById('genMinute').value = minute;
+            document.getElementById('genSecond').value = second;
+            document.getElementById('genMillisecond').value = parseInt(millisecond);
+            
+            // Set timezone selector to local timezone
+            const select = document.getElementById('genTimezone');
+            select.value = localTz;
+        }
+
         // Setup drag and drop handlers for timezone items
         function setupDragAndDrop() {
             const items = document.querySelectorAll('.timezone-item');
@@ -340,6 +565,182 @@
             const utcString = now.toISOString();
             document.getElementById('timeInput').value = utcString;
             convertTime();
+        }
+
+        function generateTimeFromForm() {
+            const year = document.getElementById('genYear').value;
+            const month = document.getElementById('genMonth').value;
+            const day = String(document.getElementById('genDay').value).padStart(2, '0');
+            const hour = String(document.getElementById('genHour').value).padStart(2, '0');
+            const minute = String(document.getElementById('genMinute').value).padStart(2, '0');
+            const second = String(document.getElementById('genSecond').value).padStart(2, '0');
+            const millisecond = String(document.getElementById('genMillisecond').value || '0').padStart(3, '0');
+            const timezone = document.getElementById('genTimezone').value;
+
+            // Validate inputs
+            if (!year || !month || !day || hour === '' || minute === '' || second === '') {
+                const errorDiv = document.getElementById('errorMessage');
+                errorDiv.innerHTML = '<div class="error">Please fill in all required fields (year, month, day, hour, minute, second).</div>';
+                return;
+            }
+
+            // Create a date string in ISO format
+            let timeString = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+            
+            // Handle timezone
+            if (timezone === 'UTC') {
+                // For UTC, add milliseconds if provided, then add Z
+                if (millisecond && parseInt(millisecond) > 0) {
+                    timeString += `.${millisecond.padEnd(9, '0').substring(0, 9)}`;
+                }
+                timeString += 'Z';
+            } else {
+                // For non-UTC timezones, find the UTC time that displays as the input time in that timezone
+                const formatter = new Intl.DateTimeFormat('en-US', {
+                    timeZone: timezone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+
+                // Start with UTC time assuming the input is in UTC
+                const baseDate = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
+                
+                // Find the UTC time that displays correctly in the selected timezone
+                let bestMatch = baseDate;
+                let bestDiff = Infinity;
+                const targetYear = parseInt(year);
+                const targetMonth = parseInt(month);
+                const targetDay = parseInt(day);
+                const targetHour = parseInt(hour);
+                const targetMin = parseInt(minute);
+                const targetSec = parseInt(second);
+
+                // Search within ±14 hours range
+                for (let offsetHours = -14; offsetHours <= 14; offsetHours++) {
+                    const candidate = new Date(baseDate.getTime() + offsetHours * 60 * 60 * 1000);
+                    const parts = formatter.formatToParts(candidate);
+                    
+                    const candidateYear = parseInt(parts.find(p => p.type === 'year').value);
+                    const candidateMonth = parseInt(parts.find(p => p.type === 'month').value);
+                    const candidateDay = parseInt(parts.find(p => p.type === 'day').value);
+                    const candidateHour = parseInt(parts.find(p => p.type === 'hour').value);
+                    const candidateMin = parseInt(parts.find(p => p.type === 'minute').value);
+                    const candidateSec = parseInt(parts.find(p => p.type === 'second').value);
+                    
+                    if (candidateYear === targetYear && 
+                        candidateMonth === targetMonth && 
+                        candidateDay === targetDay &&
+                        candidateHour === targetHour && 
+                        candidateMin === targetMin &&
+                        candidateSec === targetSec) {
+                        bestMatch = candidate;
+                        break;
+                    }
+                    
+                    // Track closest match
+                    const hourDiff = Math.abs(candidateHour - targetHour);
+                    const minDiff = Math.abs(candidateMin - targetMin);
+                    const totalDiff = hourDiff * 60 + minDiff;
+                    
+                    if (totalDiff < bestDiff) {
+                        bestDiff = totalDiff;
+                        bestMatch = candidate;
+                    }
+                }
+
+                // Format as ISO string
+                timeString = bestMatch.toISOString();
+                
+                // Preserve milliseconds if provided
+                if (millisecond && parseInt(millisecond) > 0) {
+                    const isoParts = timeString.split('.');
+                    const fullMs = millisecond.padEnd(9, '0').substring(0, 9);
+                    timeString = isoParts[0] + '.' + fullMs + (timeString.endsWith('Z') ? 'Z' : '');
+                }
+            }
+
+            // Set the generated time string in the input field
+            document.getElementById('timeInput').value = timeString;
+            
+            // Automatically convert
+            convertTime();
+        }
+
+        // Get background gradient based on hour (realistic sky colors)
+        function getTimeOfDayColor(hour) {
+            let h = parseInt(hour);
+            
+            // Deep Night: 23-1 (midnight hours) - very dark navy
+            if (h >= 23 || h < 2) {
+                return 'linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%)';
+            }
+            // Late Night: 2-4 - dark blue
+            if (h >= 2 && h < 4) {
+                return 'linear-gradient(135deg, #1a1f3a 0%, #1e2338 100%)';
+            }
+            // Pre-Dawn: 4-5 - dark blue to purple
+            if (h >= 4 && h < 5) {
+                const progress = h - 4;
+                return `linear-gradient(135deg, #1e2338 0%, #2d1b4e ${progress * 100}%, #4a2c5a 100%)`;
+            }
+            // Dawn: 5-7 - purple to pink to orange
+            if (h >= 5 && h < 7) {
+                const progress = (h - 5) / 2;
+                if (progress < 0.5) {
+                    // 5-6: Purple to pink
+                    const p = progress * 2;
+                    return `linear-gradient(135deg, #4a2c5a 0%, #8b4d7a ${p * 100}%, #d4796b 100%)`;
+                } else {
+                    // 6-7: Pink to orange
+                    const p = (progress - 0.5) * 2;
+                    return `linear-gradient(135deg, #d4796b 0%, #ff8c5a ${p * 100}%, #ffaa5e 100%)`;
+                }
+            }
+            // Early Morning: 7-9 - orange/yellow to light sky blue
+            if (h >= 7 && h < 9) {
+                const progress = (h - 7) / 2;
+                return `linear-gradient(135deg, #ffaa5e 0%, #ffd4a3 ${progress * 100}%, #87ceeb ${(1 - progress) * 100}%, #b0e0e6 100%)`;
+            }
+            // Daytime: 9-15 - bright sky blue
+            if (h >= 9 && h < 15) {
+                return 'linear-gradient(135deg, #87ceeb 0%, #b0e0e6 100%)';
+            }
+            // Late Afternoon: 15-17 - sky blue
+            if (h >= 15 && h < 17) {
+                const progress = (h - 15) / 2;
+                return `linear-gradient(135deg, #b0e0e6 0%, #87ceeb ${progress * 100}%, #87ceeb 100%)`;
+            }
+            // Golden Hour: 17-18 - light blue to golden
+            if (h >= 17 && h < 18) {
+                const progress = h - 17;
+                return `linear-gradient(135deg, #87ceeb 0%, #ffd89b ${progress * 100}%, #ffaa5e 100%)`;
+            }
+            // Sunset: 18-19 - orange to pink
+            if (h >= 18 && h < 19) {
+                const progress = h - 18;
+                return `linear-gradient(135deg, #ffaa5e 0%, #ff8c5a ${progress * 100}%, #d4796b 100%)`;
+            }
+            // Twilight: 19-20 - pink to purple
+            if (h >= 19 && h < 20) {
+                const progress = h - 19;
+                return `linear-gradient(135deg, #d4796b 0%, #8b4d7a ${progress * 100}%, #4a2c5a 100%)`;
+            }
+            // Early Night: 20-22 - purple to dark blue
+            if (h >= 20 && h < 22) {
+                const progress = (h - 20) / 2;
+                return `linear-gradient(135deg, #4a2c5a 0%, #2d1b4e ${progress * 100}%, #1e2338 100%)`;
+            }
+            // Night: 22-23 - dark blue
+            if (h >= 22 && h < 23) {
+                return 'linear-gradient(135deg, #1e2338 0%, #1a1f3a 100%)';
+            }
+            
+            return '#87ceeb'; // Default to sky blue (fallback)
         }
 
         function convertTime() {
@@ -459,11 +860,18 @@
                     offset = `UTC${sign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
                 }
 
+                // Get hour in this timezone for day/night gradient
+                const hourInTz = parseInt(parts.find(p => p.type === 'hour').value);
+                const gradient = getTimeOfDayColor(hourInTz);
+                
                 return `
                     <div class="timezone-item" draggable="true" data-index="${index}">
-                        <div class="timezone-name">${tz.name}</div>
-                        <div class="timezone-time">${dateStr}T${timeStr}</div>
-                        <div class="timezone-offset">${offset}</div>
+                        <div class="timezone-item-inner">
+                            <div class="timezone-name">${tz.name}</div>
+                            <div class="timezone-time">${dateStr}T${timeStr}</div>
+                            <div class="timezone-offset">${offset}</div>
+                        </div>
+                        <div class="day-night-indicator" style="background: ${gradient};"></div>
                     </div>
                 `;
             }).join('');
@@ -488,10 +896,17 @@
 
         // Auto-convert when page loads if there's a value in the input
         window.addEventListener('load', function() {
-            const input = document.getElementById('timeInput').value.trim();
-            if (input) {
-                convertTime();
-            }
+            // Ensure local timezone is in timezoneData (may add it if missing)
+            ensureLocalTimezone();
+            
+            // Populate timezone selector (now includes local timezone if it was added)
+            populateTimezoneSelector();
+            
+            // Populate form with current local time
+            populateFormWithLocalTime();
+            
+            // Set main input to current UTC time
+            setCurrentTime();
         });
     </script>
 </body>
