@@ -671,76 +671,92 @@
             convertTime();
         }
 
-        // Get background gradient based on hour (realistic sky colors)
-        function getTimeOfDayColor(hour) {
-            let h = parseInt(hour);
+        // Color palette for each hour (0-23)
+        const hourColors = [
+            '#0a0e27', // 0 - Deep midnight navy
+            '#0a0e27', // 1 - Deep midnight navy
+            '#1a1f3a', // 2 - Dark navy blue
+            '#1a1f3a', // 3 - Dark navy blue
+            '#1e2338', // 4 - Dark blue
+            '#2d1b4e', // 5 - Dark purple
+            '#4a2c5a', // 6 - Purple
+            '#8b4d7a', // 7 - Purple-pink
+            '#d4796b', // 8 - Pink-orange
+            '#ff8c5a', // 9 - Orange
+            '#ffaa5e', // 10 - Orange-yellow
+            '#ffd4a3', // 11 - Light yellow
+            '#ffffd4', // 12 - Bright yellow (noon)
+            '#ffd89b', // 13 - Golden yellow
+            '#b0e0e6', // 14 - Light sky blue
+            '#87ceeb', // 15 - Sky blue
+            '#87ceeb', // 16 - Sky blue
+            '#87ceeb', // 17 - Sky blue
+            '#87ceeb', // 18 - Sky blue
+            '#ffd89b', // 19 - Golden yellow
+            '#ffaa5e', // 20 - Orange-yellow
+            '#ff8c5a', // 21 - Orange
+            '#d4796b', // 22 - Pink-orange
+            '#4a2c5a', // 23 - Purple
+        ];
+
+        // Convert hex color to RGB
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 135, g: 206, b: 235 }; // Default sky blue
+        }
+
+        // Interpolate between two RGB colors
+        function interpolateColor(color1, color2, factor) {
+            const r1 = hexToRgb(color1);
+            const r2 = hexToRgb(color2);
             
-            // Deep Night: 23-1 (midnight hours) - very dark navy
-            if (h >= 23 || h < 2) {
-                return 'linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%)';
-            }
-            // Late Night: 2-4 - dark blue
-            if (h >= 2 && h < 4) {
-                return 'linear-gradient(135deg, #1a1f3a 0%, #1e2338 100%)';
-            }
-            // Pre-Dawn: 4-5 - dark blue to purple
-            if (h >= 4 && h < 5) {
-                const progress = h - 4;
-                return `linear-gradient(135deg, #1e2338 0%, #2d1b4e ${progress * 100}%, #4a2c5a 100%)`;
-            }
-            // Dawn: 5-7 - purple to pink to orange
-            if (h >= 5 && h < 7) {
-                const progress = (h - 5) / 2;
-                if (progress < 0.5) {
-                    // 5-6: Purple to pink
-                    const p = progress * 2;
-                    return `linear-gradient(135deg, #4a2c5a 0%, #8b4d7a ${p * 100}%, #d4796b 100%)`;
-                } else {
-                    // 6-7: Pink to orange
-                    const p = (progress - 0.5) * 2;
-                    return `linear-gradient(135deg, #d4796b 0%, #ff8c5a ${p * 100}%, #ffaa5e 100%)`;
-                }
-            }
-            // Early Morning: 7-9 - orange/yellow to light sky blue
-            if (h >= 7 && h < 9) {
-                const progress = (h - 7) / 2;
-                return `linear-gradient(135deg, #ffaa5e 0%, #ffd4a3 ${progress * 100}%, #87ceeb ${(1 - progress) * 100}%, #b0e0e6 100%)`;
-            }
-            // Daytime: 9-15 - bright sky blue
-            if (h >= 9 && h < 15) {
-                return 'linear-gradient(135deg, #87ceeb 0%, #b0e0e6 100%)';
-            }
-            // Late Afternoon: 15-17 - sky blue
-            if (h >= 15 && h < 17) {
-                const progress = (h - 15) / 2;
-                return `linear-gradient(135deg, #b0e0e6 0%, #87ceeb ${progress * 100}%, #87ceeb 100%)`;
-            }
-            // Golden Hour: 17-18 - light blue to golden
-            if (h >= 17 && h < 18) {
-                const progress = h - 17;
-                return `linear-gradient(135deg, #87ceeb 0%, #ffd89b ${progress * 100}%, #ffaa5e 100%)`;
-            }
-            // Sunset: 18-19 - orange to pink
-            if (h >= 18 && h < 19) {
-                const progress = h - 18;
-                return `linear-gradient(135deg, #ffaa5e 0%, #ff8c5a ${progress * 100}%, #d4796b 100%)`;
-            }
-            // Twilight: 19-20 - pink to purple
-            if (h >= 19 && h < 20) {
-                const progress = h - 19;
-                return `linear-gradient(135deg, #d4796b 0%, #8b4d7a ${progress * 100}%, #4a2c5a 100%)`;
-            }
-            // Early Night: 20-22 - purple to dark blue
-            if (h >= 20 && h < 22) {
-                const progress = (h - 20) / 2;
-                return `linear-gradient(135deg, #4a2c5a 0%, #2d1b4e ${progress * 100}%, #1e2338 100%)`;
-            }
-            // Night: 22-23 - dark blue
-            if (h >= 22 && h < 23) {
-                return 'linear-gradient(135deg, #1e2338 0%, #1a1f3a 100%)';
-            }
+            const r = Math.round(r1.r + (r2.r - r1.r) * factor);
+            const g = Math.round(r1.g + (r2.g - r1.g) * factor);
+            const b = Math.round(r1.b + (r2.b - r1.b) * factor);
             
-            return '#87ceeb'; // Default to sky blue (fallback)
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        // Parse RGB string to RGB object
+        function parseRgb(rgbString) {
+            const match = rgbString.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (match) {
+                return {
+                    r: parseInt(match[1]),
+                    g: parseInt(match[2]),
+                    b: parseInt(match[3])
+                };
+            }
+            return { r: 135, g: 206, b: 235 }; // Default sky blue
+        }
+
+        // Get background gradient based on exact time (hour and minute)
+        function getTimeOfDayColor(hour, minute = 0) {
+            const h = parseInt(hour);
+            const m = parseInt(minute) || 0;
+            const minuteProgress = m / 60; // 0 to 1
+            
+            // Get colors for current hour and next hour
+            const currentColor = hourColors[h];
+            const nextHour = (h + 1) % 24;
+            const nextColor = hourColors[nextHour];
+            
+            // Interpolate between current and next hour colors based on minutes
+            const interpolatedColor = interpolateColor(currentColor, nextColor, minuteProgress);
+            
+            // Parse the interpolated RGB color
+            const rgb = parseRgb(interpolatedColor);
+            
+            // Create a gradient using the interpolated color
+            // Use slightly darker/lighter variations for the gradient effect
+            const lighter = `rgb(${Math.min(255, rgb.r + 20)}, ${Math.min(255, rgb.g + 20)}, ${Math.min(255, rgb.b + 20)})`;
+            const darker = `rgb(${Math.max(0, rgb.r - 20)}, ${Math.max(0, rgb.g - 20)}, ${Math.max(0, rgb.b - 20)})`;
+            
+            return `linear-gradient(135deg, ${darker} 0%, ${interpolatedColor} 50%, ${lighter} 100%)`;
         }
 
         function convertTime() {
@@ -813,9 +829,14 @@
                     fractionalSeconds = milliseconds.padEnd(9, '0');
                 }
                 
+                // Remove trailing zeros from fractional seconds
+                fractionalSeconds = fractionalSeconds.replace(/0+$/, '');
+                
                 // Build the formatted time string
                 const dateStr = `${parts.find(p => p.type === 'year').value}-${parts.find(p => p.type === 'month').value}-${parts.find(p => p.type === 'day').value}`;
-                const timeStr = `${parts.find(p => p.type === 'hour').value}:${parts.find(p => p.type === 'minute').value}:${parts.find(p => p.type === 'second').value}.${fractionalSeconds}`;
+                // Only add fractional part if there are significant digits
+                const fractionalPart = fractionalSeconds ? `.${fractionalSeconds}` : '';
+                const timeStr = `${parts.find(p => p.type === 'hour').value}:${parts.find(p => p.type === 'minute').value}:${parts.find(p => p.type === 'second').value}${fractionalPart}`;
                 
                 // Get timezone offset for this specific date/time
                 let offset = 'UTC';
@@ -860,9 +881,10 @@
                     offset = `UTC${sign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
                 }
 
-                // Get hour in this timezone for day/night gradient
+                // Get hour and minute in this timezone for day/night gradient
                 const hourInTz = parseInt(parts.find(p => p.type === 'hour').value);
-                const gradient = getTimeOfDayColor(hourInTz);
+                const minuteInTz = parseInt(parts.find(p => p.type === 'minute').value);
+                const gradient = getTimeOfDayColor(hourInTz, minuteInTz);
                 
                 return `
                     <div class="timezone-item" draggable="true" data-index="${index}">
