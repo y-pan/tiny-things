@@ -42,6 +42,9 @@
       margin-bottom: 16px;
       padding-bottom: 12px;
       border-bottom: 2px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     .token-info {
       display: grid;
@@ -148,10 +151,12 @@
     .token-card {
       position: relative;
     }
-    .token-remove {
-      position: absolute;
-      top: 20px;
-      right: 20px;
+    .token-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .token-remove,
+    .token-edit {
       padding: 6px 12px;
       font-size: 12px;
     }
@@ -175,7 +180,10 @@
           <label for="tokenValue">Token Value</label>
           <textarea id="tokenValue" rows="2" placeholder="Paste JWT token here..."></textarea>
         </div>
-        <button class="btn" onclick="addToken()">Add Token</button>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <button class="btn" id="addUpdateBtn" onclick="addToken()">Add Token</button>
+          <button class="btn btn-secondary" id="cancelBtn" onclick="cancelEdit()" style="display: none;">Cancel</button>
+        </div>
       </div>
       <button class="btn btn-secondary" onclick="clearAllTokens()" style="width: 100%;">Clear All Tokens</button>
     </div>
@@ -187,6 +195,9 @@
 
     // Dynamic token storage
     let allTokens = {};
+    
+    // Track which token is being edited
+    let editingTokenKey = null;
     
     // sessionStorage keys
     const STORAGE_KEY = 'jwtTokens';
@@ -371,13 +382,27 @@
                 
                 const header = document.createElement('div');
                 header.className = 'token-header';
-                header.innerHTML = `${key} `;
+                
+                const title = document.createElement('span');
+                title.textContent = key;
+                header.appendChild(title);
+                
+                const actions = document.createElement('div');
+                actions.className = 'token-actions';
+                
+                const editBtn = document.createElement('button');
+                editBtn.className = 'btn btn-secondary token-edit';
+                editBtn.textContent = 'Edit';
+                editBtn.onclick = () => editToken(key);
+                actions.appendChild(editBtn);
                 
                 const removeBtn = document.createElement('button');
                 removeBtn.className = 'btn btn-danger token-remove';
                 removeBtn.textContent = 'Remove';
                 removeBtn.onclick = () => removeToken(key);
-                header.appendChild(removeBtn);
+                actions.appendChild(removeBtn);
+                
+                header.appendChild(actions);
                 card.appendChild(header);
                 
                 const info = document.createElement('div');
@@ -407,13 +432,27 @@
             
             const header = document.createElement('div');
             header.className = 'token-header';
-            header.innerHTML = `${key} `;
+            
+            const title = document.createElement('span');
+            title.textContent = key;
+            header.appendChild(title);
+            
+            const actions = document.createElement('div');
+            actions.className = 'token-actions';
+            
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-secondary token-edit';
+            editBtn.textContent = 'Edit';
+            editBtn.onclick = () => editToken(key);
+            actions.appendChild(editBtn);
             
             const removeBtn = document.createElement('button');
             removeBtn.className = 'btn btn-danger token-remove';
             removeBtn.textContent = 'Remove';
             removeBtn.onclick = () => removeToken(key);
-            header.appendChild(removeBtn);
+            actions.appendChild(removeBtn);
+            
+            header.appendChild(actions);
             card.appendChild(header);
             
             const info = document.createElement('div');
@@ -480,24 +519,64 @@
             return;
         }
         
-        // Add token to storage
+        // If editing, remove the old token if name changed
+        if (editingTokenKey && editingTokenKey !== name) {
+            delete allTokens[editingTokenKey];
+        }
+        
+        // Add/update token in storage
         allTokens[name] = value;
         
         // Save to sessionStorage
         saveTokensToStorage();
         
-        // Clear form
-        nameInput.value = '';
-        valueInput.value = '';
+        // Clear form and exit edit mode
+        cancelEdit();
         
         // Refresh display
         displayTokens();
+    }
+    
+    function editToken(key) {
+        editingTokenKey = key;
+        const tokenValue = allTokens[key];
+        
+        // Populate form with token data
+        document.getElementById('tokenName').value = key;
+        document.getElementById('tokenValue').value = tokenValue || '';
+        
+        // Update button text and show cancel button
+        document.getElementById('addUpdateBtn').textContent = 'Update Token';
+        document.getElementById('cancelBtn').style.display = 'block';
+        
+        // Scroll to form
+        document.querySelector('.add-token-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // Focus on token value field
+        document.getElementById('tokenValue').focus();
+    }
+    
+    function cancelEdit() {
+        editingTokenKey = null;
+        
+        // Clear form
+        document.getElementById('tokenName').value = '';
+        document.getElementById('tokenValue').value = '';
+        
+        // Reset button text and hide cancel button
+        document.getElementById('addUpdateBtn').textContent = 'Add Token';
+        document.getElementById('cancelBtn').style.display = 'none';
     }
     
     function removeToken(key) {
         if (confirm(`Are you sure you want to remove token "${key}"?`)) {
             delete allTokens[key];
             tokenData.delete(key);
+            
+            // If removing the token being edited, cancel edit mode
+            if (editingTokenKey === key) {
+                cancelEdit();
+            }
             
             // Save to sessionStorage
             saveTokensToStorage();
@@ -515,6 +594,9 @@
         if (confirm('Are you sure you want to clear all tokens?')) {
             allTokens = {};
             tokenData.clear();
+            
+            // Cancel edit mode if active
+            cancelEdit();
             
             // Save to sessionStorage
             saveTokensToStorage();
