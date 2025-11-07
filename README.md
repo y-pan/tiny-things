@@ -20,5 +20,9 @@
 
 10. [Tree Visualization](https://y-pan.github.io/tiny-things/tree.html)
 
-11. [Time](https://y-pan.github.io/tiny-things/time.html)
+11. [Json](https://y-pan.github.io/tiny-things/json.html)
+
+12. [Time](https://y-pan.github.io/tiny-things/time.html)
+
+13. [Token](https://y-pan.github.io/tiny-things/token.html)
 

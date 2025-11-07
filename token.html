@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Token</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f7fb;
+      padding: 20px;
+      color: #1f2937;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin-bottom: 24px;
+      color: #111827;
+    }
+    .token-grid {
+      display: grid;
+      gap: 16px;
+    }
+    .token-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .token-header {
+      font-weight: 600;
+      font-size: 18px;
+      color: #111827;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .token-info {
+      display: grid;
+      gap: 12px;
+    }
+    .info-row {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .info-label {
+      font-weight: 600;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .info-value {
+      color: #111827;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      word-break: break-word;
+    }
+    .expired {
+      color: #dc2626;
+      font-weight: 600;
+    }
+    .expiring-soon {
+      color: #f59e0b;
+      font-weight: 600;
+    }
+    .valid {
+      color: #059669;
+      font-weight: 600;
+    }
+    #tokenInfo {
+      margin-top: 20px;
+    }
+    .add-token-form {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      margin-bottom: 24px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 2fr auto;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 12px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .form-group label {
+      font-weight: 600;
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+    .form-group input,
+    .form-group textarea {
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      resize: vertical;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .btn {
+      padding: 10px 20px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: #2563eb;
+    }
+    .btn-secondary {
+      background: #6b7280;
+    }
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+    .btn-danger {
+      background: #dc2626;
+    }
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
+    .token-card {
+      position: relative;
+    }
+    .token-remove {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Token Information</h1>
+    
+    <div class="add-token-form">
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label for="pageTitle">Page Title</label>
+        <input type="text" id="pageTitle" placeholder="Enter page title (appears in browser tab)" oninput="updatePageTitle()" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="tokenName">Token Name</label>
+          <input type="text" id="tokenName" placeholder="e.g., accessToken" />
+        </div>
+        <div class="form-group">
+          <label for="tokenValue">Token Value</label>
+          <textarea id="tokenValue" rows="2" placeholder="Paste JWT token here..."></textarea>
+        </div>
+        <button class="btn" onclick="addToken()">Add Token</button>
+      </div>
+      <button class="btn btn-secondary" onclick="clearAllTokens()" style="width: 100%;">Clear All Tokens</button>
+    </div>
+    
+    <div id="tokenInfo"></div>
+  </div>
+
+  <script>
+
+    // Dynamic token storage
+    let allTokens = {};
+    
+    // sessionStorage keys
+    const STORAGE_KEY = 'jwtTokens';
+    const TITLE_STORAGE_KEY = 'pageTitle';
+    
+    // Load tokens from sessionStorage
+    function loadTokensFromStorage() {
+        try {
+            const stored = sessionStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                allTokens = JSON.parse(stored);
+            }
+        } catch (error) {
+            console.error('Error loading tokens from sessionStorage:', error);
+            allTokens = {};
+        }
+    }
+    
+    // Save tokens to sessionStorage
+    function saveTokensToStorage() {
+        try {
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(allTokens));
+        } catch (error) {
+            console.error('Error saving tokens to sessionStorage:', error);
+        }
+    }
+    
+    // Load page title from sessionStorage
+    function loadPageTitle() {
+        try {
+            const title = sessionStorage.getItem(TITLE_STORAGE_KEY);
+            if (title) {
+                document.getElementById('pageTitle').value = title;
+                document.title = title;
+            }
+        } catch (error) {
+            console.error('Error loading page title from sessionStorage:', error);
+        }
+    }
+    
+    // Save page title to sessionStorage
+    function savePageTitle() {
+        try {
+            const title = document.getElementById('pageTitle').value.trim();
+            sessionStorage.setItem(TITLE_STORAGE_KEY, title);
+        } catch (error) {
+            console.error('Error saving page title to sessionStorage:', error);
+        }
+    }
+    
+    // Update page title (browser tab title)
+    function updatePageTitle() {
+        const titleInput = document.getElementById('pageTitle');
+        const title = titleInput.value.trim();
+        
+        // Update browser tab title
+        document.title = title || 'Token';
+        
+        // Save to sessionStorage
+        savePageTitle();
+    }
+
+    function parseJwt (token) {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    }
+
+    
+    // Store token expiration timestamps and DOM references for efficient updates
+    const tokenData = new Map();
+    
+    function formatTimeRemaining(expInSeconds) {
+        if (expInSeconds < 0) {
+            return {
+                statusText: `Expired ${Math.abs(expInSeconds)} seconds ago`,
+                statusClass: 'expired',
+                expiresInText: `${expInSeconds} seconds (expired)`
+            };
+        } else if (expInSeconds < 3600) {
+            const minutes = Math.floor(expInSeconds / 60);
+            const seconds = expInSeconds % 60;
+            return {
+                statusText: `Expires in ${minutes}m ${seconds}s`,
+                statusClass: 'expiring-soon',
+                expiresInText: `${expInSeconds} seconds (${minutes}m ${seconds}s)`
+            };
+        } else if (expInSeconds < 86400) {
+            const hours = Math.floor(expInSeconds / 3600);
+            const minutes = Math.floor((expInSeconds % 3600) / 60);
+            return {
+                statusText: `Expires in ${hours}h ${minutes}m`,
+                statusClass: 'expiring-soon',
+                expiresInText: `${expInSeconds} seconds (${hours}h ${minutes}m)`
+            };
+        } else {
+            const days = Math.floor(expInSeconds / 86400);
+            const hours = Math.floor((expInSeconds % 86400) / 3600);
+            return {
+                statusText: `Expires in ${days} day${days !== 1 ? 's' : ''} ${hours}h`,
+                statusClass: 'valid',
+                expiresInText: `${expInSeconds} seconds (${days}d ${hours}h)`
+            };
+        }
+    }
+    
+    function updateTokenCountdown() {
+        const nowSec = Math.floor(Date.now() / 1000);
+        
+        tokenData.forEach((data, key) => {
+            const expInSeconds = data.expSec - nowSec;
+            const formatted = formatTimeRemaining(expInSeconds);
+            
+            // Update cached DOM elements directly (no querySelector needed)
+            if (data.statusEl) {
+                data.statusEl.textContent = formatted.statusText;
+                data.statusEl.className = `info-value ${formatted.statusClass} token-status`;
+            }
+            
+            if (data.expiresInEl) {
+                data.expiresInEl.textContent = formatted.expiresInText;
+            }
+        });
+    }
+    
+    function formatDateWithLocal(expSec) {
+        if (!expSec) return "N/A";
+        const date = new Date(expSec * 1000);
+        const utcStr = date.toISOString();
+        const localStr = date.toLocaleString();
+        return `${utcStr}<br><span style="color: #6b7280; font-size: 0.9em;">Local: ${localStr}</span>`;
+    }
+    
+    function displayTokens() {
+        // Clear existing display
+        document.getElementById('tokenInfo').innerHTML = '';
+        tokenData.clear();
+        
+        // Parse all tokens and collect data
+        const tokenEntries = [];
+        for (const [key, value] of Object.entries(allTokens)) {
+            try {
+                const obj = parseJwt(value);
+                tokenEntries.push({
+                    key,
+                    value,
+                    obj,
+                    expSec: obj.exp || 0
+                });
+            } catch (error) {
+                console.error(`Error parsing token ${key}:`, error);
+                // Still display token with error message
+                tokenEntries.push({
+                    key,
+                    value,
+                    obj: null,
+                    expSec: 0,
+                    error: error.message
+                });
+            }
+        }
+        
+        // Sort by expiration time (ascending - earliest first)
+        tokenEntries.sort((a, b) => {
+            // Handle tokens without expiration (put them last)
+            if (!a.expSec && !b.expSec) return 0;
+            if (!a.expSec) return 1;
+            if (!b.expSec) return -1;
+            return a.expSec - b.expSec;
+        });
+        
+        // Display tokens in sorted order
+        for (const {key, value, obj, expSec, error} of tokenEntries) {
+            if (error) {
+                // Display error token
+                const card = document.createElement('div');
+                card.className = 'token-card';
+                card.setAttribute('data-token', key);
+                
+                const header = document.createElement('div');
+                header.className = 'token-header';
+                header.innerHTML = `${key} `;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn btn-danger token-remove';
+                removeBtn.textContent = 'Remove';
+                removeBtn.onclick = () => removeToken(key);
+                header.appendChild(removeBtn);
+                card.appendChild(header);
+                
+                const info = document.createElement('div');
+                info.className = 'token-info';
+                info.innerHTML = `
+                    <div class="info-row">
+                        <div class="info-label">Error:</div>
+                        <div class="info-value" style="color: #dc2626;">${error}</div>
+                    </div>
+                `;
+                card.appendChild(info);
+                document.getElementById('tokenInfo').appendChild(card);
+                continue;
+            }
+            
+            const expStr = formatDateWithLocal(obj.exp);
+            const iatStr = formatDateWithLocal(obj.iat);
+
+            const nowSec = Math.floor(Date.now() / 1000);
+            const expInSeconds = expSec - nowSec;
+            const formatted = formatTimeRemaining(expInSeconds);
+            
+            // Create token card
+            const card = document.createElement('div');
+            card.className = 'token-card';
+            card.setAttribute('data-token', key);
+            
+            const header = document.createElement('div');
+            header.className = 'token-header';
+            header.innerHTML = `${key} `;
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'btn btn-danger token-remove';
+            removeBtn.textContent = 'Remove';
+            removeBtn.onclick = () => removeToken(key);
+            header.appendChild(removeBtn);
+            card.appendChild(header);
+            
+            const info = document.createElement('div');
+            info.className = 'token-info';
+            info.innerHTML = `
+                <div class="info-row">
+                    <div class="info-label">Expiration:</div>
+                    <div class="info-value">${expStr}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Issued At:</div>
+                    <div class="info-value">${iatStr}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Status:</div>
+                    <div class="info-value ${formatted.statusClass} token-status">${formatted.statusText}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Expires In:</div>
+                    <div class="info-value token-expires-in">${formatted.expiresInText}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">Full Payload:</div>
+                    <div class="info-value"><pre style="background: #f9fafb; padding: 12px; border-radius: 6px; overflow-x: auto; margin-top: 4px;">${JSON.stringify(obj, null, 2)}</pre></div>
+                </div>
+            `;
+            card.appendChild(info);
+            document.getElementById('tokenInfo').appendChild(card);
+            
+            // Cache DOM element references and expiration timestamp for efficient updates
+            if (expSec) {
+                tokenData.set(key, {
+                    expSec: expSec,
+                    statusEl: info.querySelector('.token-status'),
+                    expiresInEl: info.querySelector('.token-expires-in')
+                });
+            }
+        }
+        
+        // Trigger initial countdown update
+        updateTokenCountdown();
+    }
+    
+    function addToken() {
+        const nameInput = document.getElementById('tokenName');
+        const valueInput = document.getElementById('tokenValue');
+        
+        const name = nameInput.value.trim();
+        let value = valueInput.value.trim();
+        
+        // Remove surrounding quotes (single or double) from token value
+        if ((value.startsWith('"') && value.endsWith('"')) || 
+            (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+        }
+        
+        if (!name) {
+            alert('Please enter a token name');
+            return;
+        }
+        
+        if (!value) {
+            alert('Please enter a token value');
+            return;
+        }
+        
+        // Add token to storage
+        allTokens[name] = value;
+        
+        // Save to sessionStorage
+        saveTokensToStorage();
+        
+        // Clear form
+        nameInput.value = '';
+        valueInput.value = '';
+        
+        // Refresh display
+        displayTokens();
+    }
+    
+    function removeToken(key) {
+        if (confirm(`Are you sure you want to remove token "${key}"?`)) {
+            delete allTokens[key];
+            tokenData.delete(key);
+            
+            // Save to sessionStorage
+            saveTokensToStorage();
+            
+            // Refresh display
+            displayTokens();
+        }
+    }
+    
+    function clearAllTokens() {
+        if (Object.keys(allTokens).length === 0) {
+            return;
+        }
+        
+        if (confirm('Are you sure you want to clear all tokens?')) {
+            allTokens = {};
+            tokenData.clear();
+            
+            // Save to sessionStorage
+            saveTokensToStorage();
+            
+            // Refresh display
+            displayTokens();
+        }
+    }
+    
+    // Allow Enter key to submit form
+    document.getElementById('tokenValue').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.ctrlKey) {
+            addToken();
+        }
+    });
+    
+    // Initialize: load tokens and page title from sessionStorage and display
+    loadTokensFromStorage();
+    loadPageTitle();
+    displayTokens();
+    
+    // Update countdown every second
+    setInterval(updateTokenCountdown, 1000);
+
+  </script>
+</body>
+</html>
