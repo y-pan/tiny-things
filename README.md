@@ -20,9 +20,17 @@
 
 10. [Tree Visualization](https://y-pan.github.io/tiny-things/tree.html)
 
-11. [Diff Keys](https://y-pan.github.io/tiny-things/diff-keys.html)
+11. [Color Generator](https://y-pan.github.io/tiny-things/color-generator.html)
 
-12. [Time](https://y-pan.github.io/tiny-things/time.html)
+12. [Color](https://y-pan.github.io/tiny-things/color.html)
 
-13. [Token](https://y-pan.github.io/tiny-things/token.html)
+13. [Diff Keys](https://y-pan.github.io/tiny-things/diff-keys.html)
+
+14. [Gradient Generator](https://y-pan.github.io/tiny-things/gradient-generator.html)
+
+15. [Time](https://y-pan.github.io/tiny-things/time.html)
+
+16. [Token](https://y-pan.github.io/tiny-things/token.html)
+
+17. [Transition Generator](https://y-pan.github.io/tiny-things/transition-generator.html)
 

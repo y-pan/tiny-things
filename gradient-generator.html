@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gradient Generator</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #f5f7fb;
+        padding: 20px;
+        color: #1f2937;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin-bottom: 24px;
+        color: #111827;
+      }
+      .preview-section {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .gradient-preview {
+        width: 100%;
+        height: 300px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        border: 2px solid #e5e7eb;
+      }
+      .controls-section {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .control-group {
+        margin-bottom: 20px;
+      }
+      .control-group:last-child {
+        margin-bottom: 0;
+      }
+      .control-group label {
+        display: block;
+        font-weight: 600;
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 8px;
+      }
+      .control-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      select,
+      input[type="text"],
+      input[type="number"] {
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+      }
+      select:focus,
+      input[type="text"]:focus,
+      input[type="number"]:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+      input[type="color"] {
+        width: 60px;
+        height: 42px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .color-stops {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .color-stop {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 12px;
+        background: #f9fafb;
+        border-radius: 6px;
+      }
+      .color-stop input[type="color"] {
+        flex-shrink: 0;
+      }
+      .color-stop input[type="text"] {
+        flex: 1;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+      }
+      .color-stop input[type="number"] {
+        width: 80px;
+      }
+      .btn {
+        padding: 8px 16px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .btn:hover {
+        background: #2563eb;
+      }
+      .btn-danger {
+        background: #dc2626;
+      }
+      .btn-danger:hover {
+        background: #b91c1c;
+      }
+      .btn-secondary {
+        background: #6b7280;
+      }
+      .btn-secondary:hover {
+        background: #4b5563;
+      }
+      .output-section {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .output-section h2 {
+        font-size: 16px;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 12px;
+      }
+      .css-output {
+        background: #1f2937;
+        color: #f9fafb;
+        padding: 16px;
+        border-radius: 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 14px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        margin-bottom: 12px;
+        position: relative;
+      }
+      .copy-btn {
+        padding: 10px 20px;
+        background: #10b981;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .copy-btn:hover {
+        background: #059669;
+      }
+      .copy-btn.copied {
+        background: #3b82f6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Gradient Generator</h1>
+
+      <div class="preview-section">
+        <div class="gradient-preview" id="gradientPreview"></div>
+      </div>
+
+      <div class="controls-section">
+        <div class="control-group">
+          <label>Gradient Type</label>
+          <div class="control-row">
+            <select id="gradientType">
+              <option value="linear">Linear</option>
+              <option value="radial">Radial</option>
+              <option value="conic">Conic</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="control-group" id="directionGroup">
+          <label>Direction / Angle</label>
+          <div class="control-row">
+            <select id="direction">
+              <option value="to right">To Right</option>
+              <option value="to left">To Left</option>
+              <option value="to bottom">To Bottom</option>
+              <option value="to top">To Top</option>
+              <option value="to bottom right">To Bottom Right</option>
+              <option value="to bottom left">To Bottom Left</option>
+              <option value="to top right">To Top Right</option>
+              <option value="to top left">To Top Left</option>
+              <option value="custom">Custom Angle</option>
+            </select>
+            <input
+              type="number"
+              id="angle"
+              min="0"
+              max="360"
+              value="90"
+              placeholder="Angle (deg)"
+              style="display: none"
+            />
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Color Stops</label>
+          <div class="color-stops" id="colorStops"></div>
+          <button class="btn btn-secondary" onclick="addColorStop()" style="margin-top: 12px">
+            + Add Color Stop
+          </button>
+        </div>
+      </div>
+
+      <div class="output-section">
+        <h2>CSS Code</h2>
+        <div class="css-output" id="cssOutput"></div>
+        <button class="copy-btn" onclick="copyCSS()">Copy CSS</button>
+      </div>
+    </div>
+
+    <script>
+      let colorStops = [
+        { color: "#3b82f6", position: 0 },
+        { color: "#8b5cf6", position: 100 },
+      ];
+
+      function updateGradient() {
+        const type = document.getElementById("gradientType").value;
+        const direction = document.getElementById("direction").value;
+        const angle = document.getElementById("angle").value;
+        const preview = document.getElementById("gradientPreview");
+
+        // Build gradient string
+        let gradientString = "";
+
+        if (type === "linear") {
+          let directionValue = direction;
+          if (direction === "custom") {
+            directionValue = `${angle}deg`;
+          }
+          const stops = colorStops
+            .map((stop) => `${stop.color} ${stop.position}%`)
+            .join(", ");
+          gradientString = `linear-gradient(${directionValue}, ${stops})`;
+        } else if (type === "radial") {
+          let directionValue = direction;
+          if (direction === "custom") {
+            directionValue = `at ${angle}deg`;
+          } else {
+            // Convert linear directions to radial positions
+            const radialMap = {
+              "to right": "at center right",
+              "to left": "at center left",
+              "to bottom": "at center bottom",
+              "to top": "at center top",
+              "to bottom right": "at bottom right",
+              "to bottom left": "at bottom left",
+              "to top right": "at top right",
+              "to top left": "at top left",
+            };
+            directionValue = radialMap[direction] || "at center";
+          }
+          const stops = colorStops
+            .map((stop) => `${stop.color} ${stop.position}%`)
+            .join(", ");
+          gradientString = `radial-gradient(${directionValue}, ${stops})`;
+        } else if (type === "conic") {
+          let directionValue = direction === "custom" ? `from ${angle}deg` : "";
+          const stops = colorStops
+            .map((stop) => `${stop.color} ${stop.position}%`)
+            .join(", ");
+          gradientString = `conic-gradient(${directionValue}${directionValue ? ", " : ""}${stops})`;
+        }
+
+        preview.style.background = gradientString;
+
+        // Update CSS output
+        const cssCode = `background: ${gradientString};`;
+        document.getElementById("cssOutput").textContent = cssCode;
+      }
+
+      function renderColorStops() {
+        const container = document.getElementById("colorStops");
+        container.innerHTML = "";
+
+        colorStops.forEach((stop, index) => {
+          const stopDiv = document.createElement("div");
+          stopDiv.className = "color-stop";
+          stopDiv.innerHTML = `
+            <input type="color" value="${stop.color}" data-index="${index}" onchange="updateColorStop(${index}, this.value)" />
+            <input type="text" value="${stop.color}" placeholder="#000000" data-index="${index}" onchange="updateColorStop(${index}, this.value)" />
+            <input type="number" min="0" max="100" value="${stop.position}" data-index="${index}" onchange="updateColorStopPosition(${index}, this.value)" />
+            <span>%</span>
+            ${colorStops.length > 2 ? `<button class="btn btn-danger" onclick="removeColorStop(${index})">Remove</button>` : ""}
+          `;
+          container.appendChild(stopDiv);
+        });
+
+        updateGradient();
+      }
+
+      function updateColorStop(index, color) {
+        colorStops[index].color = color;
+        // Sync color picker and text input
+        const stopDiv = document.querySelectorAll(".color-stop")[index];
+        if (stopDiv) {
+          stopDiv.querySelector('input[type="color"]').value = color;
+          stopDiv.querySelector('input[type="text"]').value = color;
+        }
+        updateGradient();
+      }
+
+      function updateColorStopPosition(index, position) {
+        colorStops[index].position = Math.max(0, Math.min(100, parseInt(position) || 0));
+        renderColorStops();
+      }
+
+      function addColorStop() {
+        // Add a new color stop in the middle
+        const newPosition = Math.floor(
+          (colorStops[colorStops.length - 1].position + colorStops[0].position) / 2
+        );
+        const newColor = "#10b981"; // Default green
+        colorStops.push({ color: newColor, position: newPosition });
+        // Sort by position
+        colorStops.sort((a, b) => a.position - b.position);
+        renderColorStops();
+      }
+
+      function removeColorStop(index) {
+        if (colorStops.length > 2) {
+          colorStops.splice(index, 1);
+          renderColorStops();
+        }
+      }
+
+      function copyCSS() {
+        const css = document.getElementById("cssOutput").textContent;
+        navigator.clipboard.writeText(css).then(() => {
+          const btn = document.querySelector(".copy-btn");
+          const originalText = btn.textContent;
+          btn.textContent = "Copied!";
+          btn.classList.add("copied");
+          setTimeout(() => {
+            btn.textContent = originalText;
+            btn.classList.remove("copied");
+          }, 2000);
+        });
+      }
+
+      // Event listeners
+      document.getElementById("gradientType").addEventListener("change", () => {
+        updateGradient();
+      });
+
+      document.getElementById("direction").addEventListener("change", (e) => {
+        const angleInput = document.getElementById("angle");
+        if (e.target.value === "custom") {
+          angleInput.style.display = "block";
+        } else {
+          angleInput.style.display = "none";
+        }
+        updateGradient();
+      });
+
+      document.getElementById("angle").addEventListener("input", () => {
+        updateGradient();
+      });
+
+      // Initialize
+      renderColorStops();
+    </script>
+  </body>
+</html>
+

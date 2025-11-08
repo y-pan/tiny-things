@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Color Converter</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #f5f7fb;
+        padding: 20px;
+        color: #1f2937;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin-bottom: 24px;
+        color: #111827;
+      }
+      .color-preview {
+        width: 100%;
+        height: 200px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border: 2px solid #e5e7eb;
+        position: relative;
+        overflow: hidden;
+      }
+      .color-preview::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        /* background: linear-gradient(
+            45deg,
+            #ccc 25%,
+            transparent 25%,
+            transparent 75%,
+            #ccc 75%,
+            #ccc
+          ),
+          linear-gradient(
+            45deg,
+            #ccc 25%,
+            transparent 25%,
+            transparent 75%,
+            #ccc 75%,
+            #ccc
+          ); */
+        background-size: 20px 20px;
+        background-position: 0 0, 10px 10px;
+        opacity: 0.3;
+        pointer-events: none;
+      }
+      .color-preview-content {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 600;
+        color: white;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 16px;
+      }
+      .input-group label {
+        font-weight: 600;
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 8px;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+      }
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+      .error {
+        color: #dc2626;
+        background: #fef2f2;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Color Converter</h1>
+
+      <div class="color-preview" id="colorPreview">
+        <div class="color-preview-content" id="colorPreviewContent">
+          #3b82f6
+        </div>
+      </div>
+
+      <div id="errorMessage"></div>
+
+      <div class="input-group">
+        <label for="hexInput">HEX</label>
+        <input
+          type="text"
+          id="hexInput"
+          placeholder="#3b82f6 or 3b82f6"
+          value="#3b82f6"
+        />
+      </div>
+
+      <div class="input-group">
+        <label for="rgbInput">RGB</label>
+        <input type="text" id="rgbInput" placeholder="rgb(59, 130, 246)" />
+      </div>
+
+      <div class="input-group">
+        <label for="rgbaInput">RGBA</label>
+        <input type="text" id="rgbaInput" placeholder="rgba(59, 130, 246, 1)" />
+      </div>
+
+      <div class="input-group">
+        <label for="hslInput">HSL</label>
+        <input type="text" id="hslInput" placeholder="hsl(217, 90%, 60%)" />
+      </div>
+
+      <div class="input-group">
+        <label for="hslaInput">HSLA</label>
+        <input
+          type="text"
+          id="hslaInput"
+          placeholder="hsla(217, 90%, 60%, 1)"
+        />
+      </div>
+    </div>
+
+    <script>
+      let updating = false;
+
+      // Convert hex to RGB
+      function hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result
+          ? {
+              r: parseInt(result[1], 16),
+              g: parseInt(result[2], 16),
+              b: parseInt(result[3], 16),
+            }
+          : null;
+      }
+
+      // Convert RGB to HEX
+      function rgbToHex(r, g, b) {
+        return (
+          "#" +
+          [r, g, b]
+            .map((x) => {
+              const hex = Math.round(x).toString(16);
+              return hex.length === 1 ? "0" + hex : hex;
+            })
+            .join("")
+        );
+      }
+
+      // Convert RGB to HSL
+      function rgbToHsl(r, g, b) {
+        r /= 255;
+        g /= 255;
+        b /= 255;
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        let h,
+          s,
+          l = (max + min) / 2;
+
+        if (max === min) {
+          h = s = 0;
+        } else {
+          const d = max - min;
+          s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+          switch (max) {
+            case r:
+              h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+              break;
+            case g:
+              h = ((b - r) / d + 2) / 6;
+              break;
+            case b:
+              h = ((r - g) / d + 4) / 6;
+              break;
+          }
+        }
+
+        return {
+          h: Math.round(h * 360),
+          s: Math.round(s * 100),
+          l: Math.round(l * 100),
+        };
+      }
+
+      // Convert HSL to RGB
+      function hslToRgb(h, s, l) {
+        h /= 360;
+        s /= 100;
+        l /= 100;
+        let r, g, b;
+
+        if (s === 0) {
+          r = g = b = l;
+        } else {
+          const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1 / 6) return p + (q - p) * 6 * t;
+            if (t < 1 / 2) return q;
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+            return p;
+          };
+
+          const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+          const p = 2 * l - q;
+          r = hue2rgb(p, q, h + 1 / 3);
+          g = hue2rgb(p, q, h);
+          b = hue2rgb(p, q, h - 1 / 3);
+        }
+
+        return {
+          r: Math.round(r * 255),
+          g: Math.round(g * 255),
+          b: Math.round(b * 255),
+        };
+      }
+
+      // Parse color string
+      function parseColor(colorStr) {
+        if (!colorStr || !colorStr.trim()) return null;
+
+        const str = colorStr.trim();
+
+        // Try HEX
+        if (str.startsWith("#") || /^[0-9a-f]{6}$/i.test(str)) {
+          const hex = str.startsWith("#") ? str : "#" + str;
+          const rgb = hexToRgb(hex);
+          if (rgb) {
+            return { r: rgb.r, g: rgb.g, b: rgb.b, a: 1 };
+          }
+        }
+
+        // Try RGB
+        const rgbMatch = str.match(
+          /^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i
+        );
+        if (rgbMatch) {
+          return {
+            r: parseInt(rgbMatch[1]),
+            g: parseInt(rgbMatch[2]),
+            b: parseInt(rgbMatch[3]),
+            a: 1,
+          };
+        }
+
+        // Try RGBA
+        const rgbaMatch = str.match(
+          /^rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/i
+        );
+        if (rgbaMatch) {
+          return {
+            r: parseInt(rgbaMatch[1]),
+            g: parseInt(rgbaMatch[2]),
+            b: parseInt(rgbaMatch[3]),
+            a: parseFloat(rgbaMatch[4]),
+          };
+        }
+
+        // Try HSL
+        const hslMatch = str.match(
+          /^hsl\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)$/i
+        );
+        if (hslMatch) {
+          const rgb = hslToRgb(
+            parseInt(hslMatch[1]),
+            parseInt(hslMatch[2]),
+            parseInt(hslMatch[3])
+          );
+          return { r: rgb.r, g: rgb.g, b: rgb.b, a: 1 };
+        }
+
+        // Try HSLA
+        const hslaMatch = str.match(
+          /^hsla\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*,\s*([\d.]+)\s*\)$/i
+        );
+        if (hslaMatch) {
+          const rgb = hslToRgb(
+            parseInt(hslaMatch[1]),
+            parseInt(hslaMatch[2]),
+            parseInt(hslaMatch[3])
+          );
+          return { r: rgb.r, g: rgb.g, b: rgb.b, a: parseFloat(hslaMatch[4]) };
+        }
+
+        return null;
+      }
+
+      // Update all formats from RGB
+      function updateFromRgb(r, g, b, a = 1) {
+        if (updating) return;
+        updating = true;
+
+        const hex = rgbToHex(r, g, b);
+        const hsl = rgbToHsl(r, g, b);
+
+        // Update all inputs
+        document.getElementById("hexInput").value = hex;
+        document.getElementById("rgbInput").value = `rgb(${r}, ${g}, ${b})`;
+        document.getElementById(
+          "rgbaInput"
+        ).value = `rgba(${r}, ${g}, ${b}, ${a})`;
+        document.getElementById(
+          "hslInput"
+        ).value = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+        document.getElementById(
+          "hslaInput"
+        ).value = `hsla(${hsl.h}, ${hsl.s}%, ${hsl.l}%, ${a})`;
+
+        // Update preview
+        const previewColor = `rgba(${r}, ${g}, ${b}, ${a})`;
+        document.getElementById("colorPreview").style.backgroundColor =
+          previewColor;
+        document.getElementById("colorPreviewContent").textContent = hex;
+
+        updating = false;
+      }
+
+      function showError(message) {
+        const errorDiv = document.getElementById("errorMessage");
+        errorDiv.innerHTML = `<div class="error">${message}</div>`;
+        setTimeout(() => {
+          errorDiv.innerHTML = "";
+        }, 3000);
+      }
+
+      // Event listeners for each input
+      document.getElementById("hexInput").addEventListener("input", (e) => {
+        if (updating) return;
+        const color = parseColor(e.target.value);
+        if (color) {
+          updateFromRgb(color.r, color.g, color.b, color.a);
+        } else if (e.target.value.trim()) {
+          showError("Invalid HEX color");
+        }
+      });
+
+      document.getElementById("rgbInput").addEventListener("input", (e) => {
+        if (updating) return;
+        const color = parseColor(e.target.value);
+        if (color) {
+          updateFromRgb(color.r, color.g, color.b, color.a);
+        } else if (e.target.value.trim()) {
+          showError("Invalid RGB color");
+        }
+      });
+
+      document.getElementById("rgbaInput").addEventListener("input", (e) => {
+        if (updating) return;
+        const color = parseColor(e.target.value);
+        if (color) {
+          updateFromRgb(color.r, color.g, color.b, color.a);
+        } else if (e.target.value.trim()) {
+          showError("Invalid RGBA color");
+        }
+      });
+
+      document.getElementById("hslInput").addEventListener("input", (e) => {
+        if (updating) return;
+        const color = parseColor(e.target.value);
+        if (color) {
+          updateFromRgb(color.r, color.g, color.b, color.a);
+        } else if (e.target.value.trim()) {
+          showError("Invalid HSL color");
+        }
+      });
+
+      document.getElementById("hslaInput").addEventListener("input", (e) => {
+        if (updating) return;
+        const color = parseColor(e.target.value);
+        if (color) {
+          updateFromRgb(color.r, color.g, color.b, color.a);
+        } else if (e.target.value.trim()) {
+          showError("Invalid HSLA color");
+        }
+      });
+
+      // Initialize
+      updateFromRgb(59, 130, 246, 1);
+    </script>
+  </body>
+</html>
