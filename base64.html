@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Base64 Encoder/Decoder</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #f5f7fb;
+        padding: 20px;
+        color: #1f2937;
+      }
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin-bottom: 24px;
+        color: #111827;
+      }
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 20px;
+      }
+      .input-group label {
+        font-weight: 600;
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .label-actions {
+        display: flex;
+        gap: 8px;
+      }
+      textarea {
+        width: 100%;
+        min-height: 200px;
+        padding: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        resize: vertical;
+      }
+      textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+      .btn {
+        padding: 6px 12px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .btn:hover {
+        background: #2563eb;
+      }
+      .btn-secondary {
+        background: #6b7280;
+      }
+      .btn-secondary:hover {
+        background: #4b5563;
+      }
+      .btn-small {
+        padding: 4px 8px;
+        font-size: 11px;
+      }
+      .error {
+        color: #dc2626;
+        background: #fef2f2;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        font-size: 14px;
+      }
+      .info {
+        color: #059669;
+        background: #ecfdf5;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        font-size: 14px;
+      }
+      .stats {
+        display: flex;
+        gap: 16px;
+        margin-top: 8px;
+        font-size: 12px;
+        color: #6b7280;
+      }
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Base64 Encoder/Decoder</h1>
+
+      <div id="errorMessage"></div>
+      <div id="infoMessage"></div>
+
+      <div class="input-group">
+        <label for="plainTextInput">
+          Plain Text
+          <span class="label-actions">
+            <button
+              class="btn btn-small btn-secondary"
+              onclick="clearPlainText()"
+            >
+              Clear
+            </button>
+            <button class="btn btn-small" onclick="copyPlainText()">
+              Copy
+            </button>
+          </span>
+        </label>
+        <textarea
+          id="plainTextInput"
+          placeholder="Enter text to encode to Base64..."
+        ></textarea>
+        <div class="stats">
+          <div class="stat-item">
+            <span>Characters:</span>
+            <span id="plainTextCount">0</span>
+          </div>
+          <div class="stat-item">
+            <span>Bytes:</span>
+            <span id="plainTextBytes">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label for="base64Input">
+          Base64
+          <span class="label-actions">
+            <button class="btn btn-small btn-secondary" onclick="clearBase64()">
+              Clear
+            </button>
+            <button class="btn btn-small" onclick="copyBase64()">Copy</button>
+          </span>
+        </label>
+        <textarea
+          id="base64Input"
+          placeholder="Enter Base64 string to decode..."
+        ></textarea>
+        <div class="stats">
+          <div class="stat-item">
+            <span>Characters:</span>
+            <span id="base64Count">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let updating = false;
+
+      // Load from sessionStorage on page load
+      window.addEventListener("DOMContentLoaded", () => {
+        const savedPlainText = sessionStorage.getItem("base64_plainText");
+        const savedBase64 = sessionStorage.getItem("base64_base64");
+        if (savedPlainText !== null) {
+          document.getElementById("plainTextInput").value = savedPlainText;
+          updateStats();
+        }
+        if (savedBase64 !== null) {
+          document.getElementById("base64Input").value = savedBase64;
+          updateStats();
+        }
+      });
+
+      // Save to sessionStorage
+      function saveToStorage() {
+        sessionStorage.setItem(
+          "base64_plainText",
+          document.getElementById("plainTextInput").value
+        );
+        sessionStorage.setItem(
+          "base64_base64",
+          document.getElementById("base64Input").value
+        );
+      }
+
+      function showError(message) {
+        const errorDiv = document.getElementById("errorMessage");
+        errorDiv.innerHTML = `<div class="error">${message}</div>`;
+        setTimeout(() => {
+          errorDiv.innerHTML = "";
+        }, 5000);
+      }
+
+      function showInfo(message) {
+        const infoDiv = document.getElementById("infoMessage");
+        infoDiv.innerHTML = `<div class="info">${message}</div>`;
+        setTimeout(() => {
+          infoDiv.innerHTML = "";
+        }, 3000);
+      }
+
+      function updateStats() {
+        const plainText = document.getElementById("plainTextInput").value;
+        const base64 = document.getElementById("base64Input").value;
+
+        // Plain text stats
+        const plainTextCount = plainText.length;
+        const plainTextBytes = new TextEncoder().encode(plainText).length;
+        document.getElementById("plainTextCount").textContent = plainTextCount;
+        document.getElementById("plainTextBytes").textContent = plainTextBytes;
+
+        // Base64 stats
+        document.getElementById("base64Count").textContent = base64.length;
+      }
+
+      function encodeToBase64(text) {
+        try {
+          // Encode to Base64
+          return btoa(
+            encodeURIComponent(text).replace(
+              /%([0-9A-F]{2})/g,
+              function (match, p1) {
+                return String.fromCharCode("0x" + p1);
+              }
+            )
+          );
+        } catch (e) {
+          throw new Error("Failed to encode to Base64: " + e.message);
+        }
+      }
+
+      function decodeFromBase64(base64Str) {
+        try {
+          // Remove whitespace
+          const cleaned = base64Str.trim().replace(/\s/g, "");
+
+          // Validate Base64 format
+          if (cleaned && !/^[A-Za-z0-9+/]*={0,2}$/.test(cleaned)) {
+            throw new Error("Invalid Base64 format");
+          }
+
+          // Decode from Base64
+          const decoded = atob(cleaned);
+          return decodeURIComponent(
+            decoded
+              .split("")
+              .map((c) => {
+                return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+              })
+              .join("")
+          );
+        } catch (e) {
+          throw new Error("Failed to decode from Base64: " + e.message);
+        }
+      }
+
+      // Plain text input handler
+      document
+        .getElementById("plainTextInput")
+        .addEventListener("input", (e) => {
+          if (updating) return;
+          updating = true;
+
+          const text = e.target.value;
+          updateStats();
+
+          if (text === "") {
+            document.getElementById("base64Input").value = "";
+            updating = false;
+            saveToStorage();
+            return;
+          }
+
+          try {
+            const base64 = encodeToBase64(text);
+            document.getElementById("base64Input").value = base64;
+            updateStats();
+          } catch (error) {
+            showError(error.message);
+          }
+
+          updating = false;
+          saveToStorage();
+        });
+
+      // Base64 input handler
+      document.getElementById("base64Input").addEventListener("input", (e) => {
+        if (updating) return;
+        updating = true;
+
+        const base64 = e.target.value;
+        updateStats();
+
+        if (base64 === "") {
+          document.getElementById("plainTextInput").value = "";
+          updating = false;
+          saveToStorage();
+          return;
+        }
+
+        try {
+          const decoded = decodeFromBase64(base64);
+          document.getElementById("plainTextInput").value = decoded;
+          updateStats();
+        } catch (error) {
+          showError(error.message);
+        }
+
+        updating = false;
+        saveToStorage();
+      });
+
+      // Copy functions
+      function copyPlainText() {
+        const text = document.getElementById("plainTextInput").value;
+        if (text) {
+          navigator.clipboard.writeText(text).then(() => {
+            showInfo("Plain text copied to clipboard!");
+          });
+        }
+      }
+
+      function copyBase64() {
+        const text = document.getElementById("base64Input").value;
+        if (text) {
+          navigator.clipboard.writeText(text).then(() => {
+            showInfo("Base64 copied to clipboard!");
+          });
+        }
+      }
+
+      // Clear functions
+      function clearPlainText() {
+        document.getElementById("plainTextInput").value = "";
+        document.getElementById("base64Input").value = "";
+        updateStats();
+        saveToStorage();
+      }
+
+      function clearBase64() {
+        document.getElementById("base64Input").value = "";
+        document.getElementById("plainTextInput").value = "";
+        updateStats();
+        saveToStorage();
+      }
+
+      // Initialize stats
+      updateStats();
+    </script>
+  </body>
+</html>

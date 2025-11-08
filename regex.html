@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Regex Tester</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #f5f7fb;
+        padding: 20px;
+        color: #1f2937;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin-bottom: 24px;
+        color: #111827;
+      }
+      .section {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .section h2 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 16px;
+      }
+      .input-group {
+        margin-bottom: 16px;
+      }
+      .input-group label {
+        display: block;
+        font-weight: 600;
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 8px;
+      }
+      input[type="text"],
+      textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+      }
+      input[type="text"]:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+      textarea {
+        min-height: 150px;
+        resize: vertical;
+      }
+      .flags-group {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+      .flag-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .flag-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+      .flag-item label {
+        font-size: 14px;
+        font-weight: 600;
+        color: #6b7280;
+        cursor: pointer;
+        margin: 0;
+      }
+      .flag-item .flag-desc {
+        font-size: 12px;
+        color: #9ca3af;
+        font-weight: normal;
+      }
+      .button-group {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+      .btn {
+        padding: 10px 20px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .btn:hover {
+        background: #2563eb;
+      }
+      .btn-secondary {
+        background: #6b7280;
+      }
+      .btn-secondary:hover {
+        background: #4b5563;
+      }
+      .btn-small {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+      .error {
+        color: #dc2626;
+        background: #fef2f2;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        font-size: 14px;
+      }
+      .info {
+        color: #059669;
+        background: #ecfdf5;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        font-size: 14px;
+      }
+      .stats {
+        display: flex;
+        gap: 24px;
+        padding: 12px;
+        background: #f9fafb;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        font-size: 14px;
+        flex-wrap: wrap;
+      }
+      .stat-item {
+        display: flex;
+        flex-direction: column;
+      }
+      .stat-label {
+        color: #6b7280;
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+      .stat-value {
+        font-weight: 600;
+        color: #111827;
+      }
+      .test-text-container {
+        position: relative;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: white;
+        min-height: 150px;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        overflow-x: auto;
+      }
+      .test-text-container .highlight {
+        background: #fef3c7;
+        padding: 2px 0;
+        border-radius: 2px;
+        position: relative;
+      }
+      .test-text-container .highlight-group {
+        background: #dbeafe;
+        padding: 2px 0;
+        border-radius: 2px;
+      }
+      .matches-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .match-item {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 12px;
+      }
+      .match-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .match-index {
+        font-weight: 600;
+        color: #3b82f6;
+        font-size: 14px;
+      }
+      .match-position {
+        font-size: 12px;
+        color: #6b7280;
+      }
+      .match-text {
+        background: white;
+        padding: 8px;
+        border-radius: 4px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 13px;
+        margin-bottom: 8px;
+        word-break: break-all;
+      }
+      .match-groups {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .group-item {
+        display: flex;
+        gap: 8px;
+        font-size: 12px;
+      }
+      .group-number {
+        font-weight: 600;
+        color: #059669;
+        min-width: 40px;
+      }
+      .group-value {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        color: #111827;
+        background: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        flex: 1;
+      }
+      .patterns-library {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .pattern-item {
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .pattern-item:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .pattern-name {
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 4px;
+        font-size: 14px;
+      }
+      .pattern-regex {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        color: #3b82f6;
+        margin-bottom: 4px;
+        word-break: break-all;
+      }
+      .pattern-desc {
+        font-size: 12px;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Regex Tester</h1>
+
+      <div class="section">
+        <h2>Pattern & Test Text</h2>
+        <div class="input-group">
+          <label for="pattern-input">Regular Expression Pattern</label>
+          <input
+            type="text"
+            id="pattern-input"
+            placeholder="Enter regex pattern, e.g., /\d+/g"
+            value=""
+          />
+        </div>
+
+        <div class="flags-group">
+          <div class="flag-item">
+            <input type="checkbox" id="flag-g" />
+            <label for="flag-g">
+              g <span class="flag-desc">(global)</span>
+            </label>
+          </div>
+          <div class="flag-item">
+            <input type="checkbox" id="flag-i" />
+            <label for="flag-i">
+              i <span class="flag-desc">(case-insensitive)</span>
+            </label>
+          </div>
+          <div class="flag-item">
+            <input type="checkbox" id="flag-m" />
+            <label for="flag-m">
+              m <span class="flag-desc">(multiline)</span>
+            </label>
+          </div>
+          <div class="flag-item">
+            <input type="checkbox" id="flag-s" />
+            <label for="flag-s">
+              s <span class="flag-desc">(dotall)</span>
+            </label>
+          </div>
+          <div class="flag-item">
+            <input type="checkbox" id="flag-u" />
+            <label for="flag-u">
+              u <span class="flag-desc">(unicode)</span>
+            </label>
+          </div>
+          <div class="flag-item">
+            <input type="checkbox" id="flag-y" />
+            <label for="flag-y">
+              y <span class="flag-desc">(sticky)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label for="test-text-input">Test Text</label>
+          <textarea
+            id="test-text-input"
+            placeholder="Enter text to test against the regex pattern..."
+          ></textarea>
+        </div>
+
+        <div class="button-group">
+          <button class="btn" onclick="testRegex()">Test Regex</button>
+          <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+          <button class="btn btn-secondary" onclick="copyPattern()">Copy Pattern</button>
+        </div>
+
+        <div id="error-message"></div>
+        <div id="info-message"></div>
+      </div>
+
+      <div class="section" id="results-section" style="display: none">
+        <h2>Results</h2>
+        <div class="stats" id="stats-container"></div>
+        <div class="input-group">
+          <label>Test Text with Highlights</label>
+          <div class="test-text-container" id="highlighted-text"></div>
+        </div>
+        <div class="input-group">
+          <label>Matches</label>
+          <div class="matches-list" id="matches-list"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Common Patterns</h2>
+        <div class="patterns-library" id="patterns-library"></div>
+      </div>
+    </div>
+
+    <script>
+      // Common regex patterns
+      const commonPatterns = [
+        {
+          name: "Email",
+          pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+          description: "Validates email addresses",
+        },
+        {
+          name: "URL",
+          pattern: /^https?:\/\/.+/,
+          description: "Matches HTTP/HTTPS URLs",
+        },
+        {
+          name: "Phone Number (US)",
+          pattern: /^\+?1?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/,
+          description: "US phone number format",
+        },
+        {
+          name: "Digits Only",
+          pattern: /^\d+$/,
+          description: "Matches one or more digits",
+        },
+        {
+          name: "Letters Only",
+          pattern: /^[a-zA-Z]+$/,
+          description: "Matches letters only (no numbers or special chars)",
+        },
+        {
+          name: "Alphanumeric",
+          pattern: /^[a-zA-Z0-9]+$/,
+          description: "Letters and numbers only",
+        },
+        {
+          name: "Hex Color",
+          pattern: /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/,
+          description: "Matches hex color codes (#fff or #ffffff)",
+        },
+        {
+          name: "Date (YYYY-MM-DD)",
+          pattern: /^\d{4}-\d{2}-\d{2}$/,
+          description: "Date in YYYY-MM-DD format",
+        },
+        {
+          name: "Time (HH:MM)",
+          pattern: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+          description: "24-hour time format",
+        },
+        {
+          name: "IP Address",
+          pattern: /^(\d{1,3}\.){3}\d{1,3}$/,
+          description: "IPv4 address format",
+        },
+        {
+          name: "Credit Card",
+          pattern: /^\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}$/,
+          description: "Credit card number format",
+        },
+        {
+          name: "Postal Code (US)",
+          pattern: /^\d{5}(-\d{4})?$/,
+          description: "US ZIP code (5 or 9 digits)",
+        },
+        {
+          name: "Username",
+          pattern: /^[a-zA-Z0-9_]{3,20}$/,
+          description: "3-20 chars: letters, numbers, underscore",
+        },
+        {
+          name: "Password (Strong)",
+          pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+          description: "8+ chars: upper, lower, digit, special",
+        },
+        {
+          name: "Whitespace",
+          pattern: /\s+/,
+          description: "Matches one or more whitespace characters",
+        },
+        {
+          name: "Word Boundary",
+          pattern: /\b\w+\b/,
+          description: "Matches whole words",
+        },
+        {
+          name: "HTML Tag",
+          pattern: /<[^>]+>/,
+          description: "Matches HTML tags",
+        },
+        {
+          name: "Quoted String",
+          pattern: /"([^"]*)"/,
+          description: "Matches text in double quotes",
+        },
+      ];
+
+      let matches = [];
+
+      function getFlags() {
+        let flags = "";
+        if (document.getElementById("flag-g").checked) flags += "g";
+        if (document.getElementById("flag-i").checked) flags += "i";
+        if (document.getElementById("flag-m").checked) flags += "m";
+        if (document.getElementById("flag-s").checked) flags += "s";
+        if (document.getElementById("flag-u").checked) flags += "u";
+        if (document.getElementById("flag-y").checked) flags += "y";
+        return flags;
+      }
+
+      function testRegex() {
+        const patternInput = document.getElementById("pattern-input").value.trim();
+        const testText = document.getElementById("test-text-input").value;
+        const errorDiv = document.getElementById("error-message");
+        const infoDiv = document.getElementById("info-message");
+        const resultsSection = document.getElementById("results-section");
+
+        errorDiv.innerHTML = "";
+        infoDiv.innerHTML = "";
+        matches = [];
+
+        if (!patternInput) {
+          errorDiv.innerHTML = '<div class="error">Please enter a regex pattern</div>';
+          resultsSection.style.display = "none";
+          return;
+        }
+
+        if (!testText) {
+          errorDiv.innerHTML = '<div class="error">Please enter test text</div>';
+          resultsSection.style.display = "none";
+          return;
+        }
+
+        try {
+          let flags = getFlags();
+          let regex;
+
+          // Try to create regex from pattern
+          // Remove leading/trailing slashes if present
+          let pattern = patternInput;
+          if (pattern.startsWith("/") && pattern.endsWith("/")) {
+            pattern = pattern.slice(1, -1);
+          } else if (pattern.startsWith("/")) {
+            const lastSlash = pattern.lastIndexOf("/");
+            if (lastSlash > 0) {
+              const extractedFlags = pattern.slice(lastSlash + 1);
+              pattern = pattern.slice(1, lastSlash);
+              // Merge extracted flags with checkbox flags
+              flags = (extractedFlags + flags).split("").filter((v, i, a) => a.indexOf(v) === i).join("");
+            }
+          }
+
+          regex = new RegExp(pattern, flags);
+
+          // Test the regex
+          const globalMatch = flags.includes("g");
+          if (globalMatch) {
+            // Get all matches
+            const matchArray = [...testText.matchAll(regex)];
+            matches = matchArray.map((match, index) => ({
+              index: index + 1,
+              match: match[0],
+              groups: match.slice(1),
+              position: match.index,
+              length: match[0].length,
+            }));
+          } else {
+            // Single match
+            const match = testText.match(regex);
+            if (match) {
+              matches = [
+                {
+                  index: 1,
+                  match: match[0],
+                  groups: match.slice(1),
+                  position: match.index,
+                  length: match[0].length,
+                },
+              ];
+            }
+          }
+
+          // Display results
+          displayResults(testText, regex);
+          resultsSection.style.display = "block";
+
+          // Save to sessionStorage
+          sessionStorage.setItem("regex_pattern", patternInput);
+          sessionStorage.setItem("regex_test_text", testText);
+          sessionStorage.setItem("regex_flags", flags);
+        } catch (error) {
+          errorDiv.innerHTML = `<div class="error">Regex Error: ${error.message}</div>`;
+          resultsSection.style.display = "none";
+        }
+      }
+
+      function displayResults(testText, regex) {
+        // Update stats
+        const statsDiv = document.getElementById("stats-container");
+        statsDiv.innerHTML = `
+          <div class="stat-item">
+            <div class="stat-label">Total Matches</div>
+            <div class="stat-value">${matches.length}</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Pattern</div>
+            <div class="stat-value" style="font-family: ui-monospace; font-size: 12px;">${regex.source}</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Flags</div>
+            <div class="stat-value">${regex.flags || "none"}</div>
+          </div>
+        `;
+
+        // Highlight matches in text
+        let highlightedText = "";
+        let lastIndex = 0;
+
+        matches.forEach((match, idx) => {
+          // Add text before match
+          highlightedText += escapeHtml(testText.substring(lastIndex, match.position));
+          
+          // Add highlighted match
+          highlightedText += `<span class="highlight" data-match="${idx}">${escapeHtml(match.match)}</span>`;
+          
+          lastIndex = match.position + match.length;
+        });
+
+        // Add remaining text
+        highlightedText += escapeHtml(testText.substring(lastIndex));
+
+        document.getElementById("highlighted-text").innerHTML = highlightedText;
+
+        // Display matches list
+        const matchesList = document.getElementById("matches-list");
+        matchesList.innerHTML = matches
+          .map((match) => {
+            const groupsHtml = match.groups.length > 0
+              ? `<div class="match-groups">
+                  ${match.groups.map((group, idx) => `
+                    <div class="group-item">
+                      <span class="group-number">Group ${idx + 1}:</span>
+                      <span class="group-value">${escapeHtml(group || "(empty)")}</span>
+                    </div>
+                  `).join("")}
+                </div>`
+              : "";
+
+            return `
+              <div class="match-item">
+                <div class="match-header">
+                  <span class="match-index">Match #${match.index}</span>
+                  <span class="match-position">Position: ${match.position}-${match.position + match.length - 1}</span>
+                </div>
+                <div class="match-text">${escapeHtml(match.match)}</div>
+                ${groupsHtml}
+              </div>
+            `;
+          })
+          .join("");
+
+        if (matches.length === 0) {
+          matchesList.innerHTML = '<div class="info">No matches found</div>';
+        }
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      function clearAll() {
+        document.getElementById("pattern-input").value = "";
+        document.getElementById("test-text-input").value = "";
+        document.querySelectorAll('input[type="checkbox"]').forEach((cb) => (cb.checked = false));
+        document.getElementById("error-message").innerHTML = "";
+        document.getElementById("info-message").innerHTML = "";
+        document.getElementById("results-section").style.display = "none";
+        sessionStorage.removeItem("regex_pattern");
+        sessionStorage.removeItem("regex_test_text");
+        sessionStorage.removeItem("regex_flags");
+      }
+
+      function copyPattern() {
+        const pattern = document.getElementById("pattern-input").value;
+        if (pattern) {
+          const flags = getFlags();
+          const fullPattern = flags ? `/${pattern}/${flags}` : `/${pattern}/`;
+          navigator.clipboard.writeText(fullPattern).then(() => {
+            showInfo("Pattern copied to clipboard!");
+          });
+        }
+      }
+
+      function showInfo(message) {
+        const infoDiv = document.getElementById("info-message");
+        infoDiv.innerHTML = `<div class="info">${message}</div>`;
+        setTimeout(() => {
+          infoDiv.innerHTML = "";
+        }, 3000);
+      }
+
+      function loadPattern(pattern) {
+        document.getElementById("pattern-input").value = pattern.source || pattern;
+        testRegex();
+      }
+
+      // Initialize patterns library
+      function initPatternsLibrary() {
+        const library = document.getElementById("patterns-library");
+        library.innerHTML = commonPatterns
+          .map(
+            (pattern) => `
+          <div class="pattern-item" onclick="loadPattern(${JSON.stringify(pattern.pattern.source)})">
+            <div class="pattern-name">${pattern.name}</div>
+            <div class="pattern-regex">/${pattern.pattern.source}/${pattern.pattern.flags}</div>
+            <div class="pattern-desc">${pattern.description}</div>
+          </div>
+        `
+          )
+          .join("");
+      }
+
+      // Auto-test on input (debounced)
+      let testTimeout;
+      document.getElementById("pattern-input").addEventListener("input", () => {
+        clearTimeout(testTimeout);
+        testTimeout = setTimeout(() => {
+          if (
+            document.getElementById("pattern-input").value.trim() &&
+            document.getElementById("test-text-input").value.trim()
+          ) {
+            testRegex();
+          }
+        }, 500);
+      });
+
+      document.getElementById("test-text-input").addEventListener("input", () => {
+        clearTimeout(testTimeout);
+        testTimeout = setTimeout(() => {
+          if (
+            document.getElementById("pattern-input").value.trim() &&
+            document.getElementById("test-text-input").value.trim()
+          ) {
+            testRegex();
+          }
+        }, 500);
+      });
+
+      document.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+        checkbox.addEventListener("change", () => {
+          if (
+            document.getElementById("pattern-input").value.trim() &&
+            document.getElementById("test-text-input").value.trim()
+          ) {
+            testRegex();
+          }
+        });
+      });
+
+      // Load from sessionStorage on page load
+      window.addEventListener("DOMContentLoaded", () => {
+        const savedPattern = sessionStorage.getItem("regex_pattern");
+        const savedText = sessionStorage.getItem("regex_test_text");
+        const savedFlags = sessionStorage.getItem("regex_flags");
+
+        if (savedPattern) {
+          document.getElementById("pattern-input").value = savedPattern;
+        }
+        if (savedText) {
+          document.getElementById("test-text-input").value = savedText;
+        }
+        if (savedFlags) {
+          savedFlags.split("").forEach((flag) => {
+            const checkbox = document.getElementById(`flag-${flag}`);
+            if (checkbox) checkbox.checked = true;
+          });
+        }
+
+        if (savedPattern && savedText) {
+          testRegex();
+        }
+
+        initPatternsLibrary();
+      });
+    </script>
+  </body>
+</html>
+
