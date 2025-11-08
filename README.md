@@ -20,7 +20,7 @@
 
 10. [Tree Visualization](https://y-pan.github.io/tiny-things/tree.html)
 
-11. [Json](https://y-pan.github.io/tiny-things/json.html)
+11. [Diff Keys](https://y-pan.github.io/tiny-things/diff-keys.html)
 
 12. [Time](https://y-pan.github.io/tiny-things/time.html)
 
