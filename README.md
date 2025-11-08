@@ -32,13 +32,15 @@
 
 16. [Gradient Generator](https://y-pan.github.io/tiny-things/gradient-generator.html)
 
-17. [Regex](https://y-pan.github.io/tiny-things/regex.html)
+17. [Random String Generator](https://y-pan.github.io/tiny-things/random-string-generator.html)
 
-18. [Svg Tool](https://y-pan.github.io/tiny-things/svg-tool.html)
+18. [Regex](https://y-pan.github.io/tiny-things/regex.html)
 
-19. [Time](https://y-pan.github.io/tiny-things/time.html)
+19. [Svg Tool](https://y-pan.github.io/tiny-things/svg-tool.html)
 
-20. [Token](https://y-pan.github.io/tiny-things/token.html)
+20. [Time](https://y-pan.github.io/tiny-things/time.html)
 
-21. [Transition Generator](https://y-pan.github.io/tiny-things/transition-generator.html)
+21. [Token](https://y-pan.github.io/tiny-things/token.html)
+
+22. [Transition Generator](https://y-pan.github.io/tiny-things/transition-generator.html)
 
