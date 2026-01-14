@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SVG Tool</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #f5f7fb;
+        padding: 20px;
+        color: #1f2937;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin-bottom: 24px;
+        color: #111827;
+      }
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+        border-bottom: 2px solid #e5e7eb;
+      }
+      .tab {
+        padding: 12px 24px;
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-size: 16px;
+        font-weight: 600;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-bottom: -2px;
+      }
+      .tab:hover {
+        color: #3b82f6;
+      }
+      .tab.active {
+        color: #3b82f6;
+        border-bottom-color: #3b82f6;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+      .section {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .section h2 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 16px;
+      }
+      .preview-container {
+        width: 100%;
+        min-height: 300px;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 20px;
+        background: #f9fafb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+      }
+      .preview-container svg {
+        max-width: 100%;
+        max-height: 100%;
+      }
+      textarea {
+        width: 100%;
+        min-height: 200px;
+        padding: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 13px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        resize: vertical;
+      }
+      textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+      .input-group {
+        margin-bottom: 16px;
+      }
+      .input-group label {
+        display: block;
+        font-weight: 600;
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 8px;
+      }
+      .button-group {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+      .btn {
+        padding: 10px 20px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .btn:hover {
+        background: #2563eb;
+      }
+      .btn-secondary {
+        background: #6b7280;
+      }
+      .btn-secondary:hover {
+        background: #4b5563;
+      }
+      .btn-success {
+        background: #059669;
+      }
+      .btn-success:hover {
+        background: #047857;
+      }
+      .btn-small {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+      .stats {
+        display: flex;
+        gap: 24px;
+        padding: 12px;
+        background: #f9fafb;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        font-size: 14px;
+      }
+      .stat-item {
+        display: flex;
+        flex-direction: column;
+      }
+      .stat-label {
+        color: #6b7280;
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+      .stat-value {
+        font-weight: 600;
+        color: #111827;
+      }
+      .stat-value.improved {
+        color: #059669;
+      }
+      .controls-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      .control-group {
+        display: flex;
+        flex-direction: column;
+      }
+      .control-group label {
+        font-weight: 600;
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 8px;
+      }
+      input[type="text"],
+      input[type="number"],
+      input[type="color"],
+      select {
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+      }
+      input[type="color"] {
+        width: 100%;
+        height: 42px;
+        cursor: pointer;
+      }
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+      .output-code {
+        background: #1f2937;
+        color: #f9fafb;
+        padding: 16px;
+        border-radius: 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+        margin-top: 12px;
+      }
+      .error {
+        color: #dc2626;
+        background: #fef2f2;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        font-size: 14px;
+      }
+      .info {
+        color: #059669;
+        background: #ecfdf5;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        font-size: 14px;
+      }
+      .shape-preview {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+      .shape-item {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .shape-item:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .shape-item svg {
+        width: 100%;
+        height: 100px;
+        margin-bottom: 8px;
+      }
+      .shape-item-name {
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>SVG Tool</h1>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('optimizer', event)">
+          Optimizer
+        </button>
+        <button class="tab" onclick="switchTab('generator', event)">
+          Generator
+        </button>
+        <button class="tab" onclick="switchTab('converter', event)">
+          Converter
+        </button>
+      </div>
+
+      <!-- Optimizer Tab -->
+      <div id="optimizer-tab" class="tab-content active">
+        <div class="section">
+          <h2>SVG Optimizer</h2>
+          <div class="input-group">
+            <label for="svg-input">Paste your SVG code</label>
+            <textarea
+              id="svg-input"
+              placeholder='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">...</svg>'
+            ></textarea>
+          </div>
+          <div class="button-group">
+            <button class="btn" onclick="optimizeSVG()">Optimize</button>
+            <button class="btn btn-secondary" onclick="clearSVG()">Clear</button>
+            <button class="btn btn-secondary" onclick="copyOptimized()">Copy Optimized</button>
+          </div>
+          <div id="optimizer-error"></div>
+          <div class="stats" id="optimizer-stats" style="display: none">
+            <div class="stat-item">
+              <div class="stat-label">Original Size</div>
+              <div class="stat-value" id="original-size">0 bytes</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Optimized Size</div>
+              <div class="stat-value improved" id="optimized-size">0 bytes</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Reduction</div>
+              <div class="stat-value improved" id="reduction">0%</div>
+            </div>
+          </div>
+          <div class="preview-container" id="optimizer-preview"></div>
+          <div class="input-group">
+            <label for="svg-output">Optimized SVG</label>
+            <textarea id="svg-output" readonly></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generator Tab -->
+      <div id="generator-tab" class="tab-content">
+        <div class="section">
+          <h2>SVG Shape Generator</h2>
+          <div class="controls-grid">
+            <div class="control-group">
+              <label for="shape-type">Shape Type</label>
+              <select id="shape-type" onchange="updateShapeGenerator()">
+                <option value="circle">Circle</option>
+                <option value="rect">Rectangle</option>
+                <option value="ellipse">Ellipse</option>
+                <option value="line">Line</option>
+                <option value="polygon">Polygon</option>
+                <option value="polyline">Polyline</option>
+                <option value="path">Path</option>
+              </select>
+            </div>
+            <div class="control-group" id="width-control">
+              <label for="shape-width">Width</label>
+              <input type="number" id="shape-width" value="100" min="1" oninput="updateShapeGenerator()" />
+            </div>
+            <div class="control-group" id="height-control">
+              <label for="shape-height">Height</label>
+              <input type="number" id="shape-height" value="100" min="1" oninput="updateShapeGenerator()" />
+            </div>
+            <div class="control-group" id="radius-control" style="display: none">
+              <label for="shape-radius">Radius</label>
+              <input type="number" id="shape-radius" value="50" min="1" oninput="updateShapeGenerator()" />
+            </div>
+            <div class="control-group" id="rx-control" style="display: none">
+              <label for="shape-rx">Radius X</label>
+              <input type="number" id="shape-rx" value="50" min="1" oninput="updateShapeGenerator()" />
+            </div>
+            <div class="control-group" id="ry-control" style="display: none">
+              <label for="shape-ry">Radius Y</label>
+              <input type="number" id="shape-ry" value="30" min="1" oninput="updateShapeGenerator()" />
+            </div>
+            <div class="control-group" id="stroke-width-control">
+              <label for="shape-stroke-width">Stroke Width</label>
+              <input type="number" id="shape-stroke-width" value="2" min="0" step="0.1" oninput="updateShapeGenerator()" />
+            </div>
+            <div class="control-group">
+              <label for="shape-fill">Fill Color</label>
+              <input type="color" id="shape-fill" value="#3b82f6" oninput="updateShapeGenerator()" />
+            </div>
+            <div class="control-group">
+              <label for="shape-stroke">Stroke Color</label>
+              <input type="color" id="shape-stroke" value="#1e40af" oninput="updateShapeGenerator()" />
+            </div>
+          </div>
+          <div class="button-group">
+            <button class="btn" onclick="copyGeneratedSVG()">Copy SVG</button>
+            <button class="btn btn-secondary" onclick="downloadGeneratedSVG()">Download</button>
+          </div>
+          <div class="preview-container" id="generator-preview"></div>
+          <div class="input-group">
+            <label for="generated-svg">Generated SVG Code</label>
+            <textarea id="generated-svg" readonly></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Converter Tab -->
+      <div id="converter-tab" class="tab-content">
+        <div class="section">
+          <h2>SVG to Data URI Converter</h2>
+          <div class="input-group">
+            <label for="converter-input">Paste your SVG code</label>
+            <textarea
+              id="converter-input"
+              placeholder='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">...</svg>'
+            ></textarea>
+          </div>
+          <div class="button-group">
+            <button class="btn" onclick="convertToDataURI()">Convert to Data URI</button>
+            <button class="btn btn-secondary" onclick="clearConverter()">Clear</button>
+            <button class="btn btn-secondary" onclick="copyDataURI()">Copy Data URI</button>
+          </div>
+          <div id="converter-error"></div>
+          <div class="preview-container" id="converter-preview"></div>
+          <div class="input-group">
+            <label for="data-uri-output">Data URI</label>
+            <textarea id="data-uri-output" readonly placeholder="data:image/svg+xml;base64,..."></textarea>
+          </div>
+          <div class="input-group">
+            <label for="css-output">CSS Background Example</label>
+            <textarea id="css-output" readonly placeholder='background-image: url("data:image/svg+xml;base64,...");'></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let currentTab = "optimizer";
+
+      // Tab switching
+      function switchTab(tab, event) {
+        currentTab = tab;
+        document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach((c) => c.classList.remove("active"));
+        
+        if (event) {
+          event.target.classList.add("active");
+        } else {
+          document.querySelectorAll(".tab").forEach((t) => {
+            if (t.textContent.trim().toLowerCase().includes(tab)) {
+              t.classList.add("active");
+            }
+          });
+        }
+        document.getElementById(`${tab}-tab`).classList.add("active");
+      }
+
+      // SVG Optimizer
+      function optimizeSVG() {
+        const input = document.getElementById("svg-input").value.trim();
+        const errorDiv = document.getElementById("optimizer-error");
+        const statsDiv = document.getElementById("optimizer-stats");
+        const preview = document.getElementById("optimizer-preview");
+        const output = document.getElementById("svg-output");
+
+        if (!input) {
+          errorDiv.innerHTML = '<div class="error">Please enter SVG code</div>';
+          return;
+        }
+
+        try {
+          // Parse SVG
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(input, "image/svg+xml");
+          const svg = doc.querySelector("svg");
+
+          if (!svg) {
+            throw new Error("Invalid SVG format");
+          }
+
+          // Optimize: remove unnecessary attributes and whitespace
+          const optimized = optimizeSVGElement(svg.cloneNode(true));
+
+          // Serialize
+          const serializer = new XMLSerializer();
+          let optimizedString = serializer.serializeToString(optimized);
+
+          // Additional cleanup
+          optimizedString = optimizedString
+            .replace(/\s+/g, " ") // Replace multiple spaces with single space
+            .replace(/>\s+</g, "><") // Remove spaces between tags
+            .trim();
+
+          // Calculate stats
+          const originalSize = new Blob([input]).size;
+          const optimizedSize = new Blob([optimizedString]).size;
+          const reduction = ((originalSize - optimizedSize) / originalSize * 100).toFixed(1);
+
+          // Update UI
+          document.getElementById("original-size").textContent = formatBytes(originalSize);
+          document.getElementById("optimized-size").textContent = formatBytes(optimizedSize);
+          document.getElementById("reduction").textContent = `${reduction}%`;
+          statsDiv.style.display = "flex";
+
+          output.value = optimizedString;
+          preview.innerHTML = optimizedString;
+          errorDiv.innerHTML = "";
+
+          // Save to sessionStorage
+          sessionStorage.setItem("svg_optimizer_input", input);
+          sessionStorage.setItem("svg_optimizer_output", optimizedString);
+        } catch (error) {
+          errorDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+          statsDiv.style.display = "none";
+          output.value = "";
+          preview.innerHTML = "";
+        }
+      }
+
+      function optimizeSVGElement(svg) {
+        // Remove common unnecessary attributes
+        const attributesToRemove = ["xmlns:xlink", "version", "x", "y"];
+        attributesToRemove.forEach((attr) => {
+          if (svg.hasAttribute(attr)) {
+            svg.removeAttribute(attr);
+          }
+        });
+
+        // Ensure xmlns is present
+        if (!svg.hasAttribute("xmlns")) {
+          svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+        }
+
+        // Remove empty groups and elements
+        const emptyElements = svg.querySelectorAll("g:empty, defs:empty");
+        emptyElements.forEach((el) => el.remove());
+
+        return svg;
+      }
+
+      function formatBytes(bytes) {
+        if (bytes === 0) return "0 bytes";
+        const k = 1024;
+        const sizes = ["bytes", "KB", "MB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
+      }
+
+      function clearSVG() {
+        document.getElementById("svg-input").value = "";
+        document.getElementById("svg-output").value = "";
+        document.getElementById("optimizer-preview").innerHTML = "";
+        document.getElementById("optimizer-error").innerHTML = "";
+        document.getElementById("optimizer-stats").style.display = "none";
+        sessionStorage.removeItem("svg_optimizer_input");
+        sessionStorage.removeItem("svg_optimizer_output");
+      }
+
+      function copyOptimized() {
+        const output = document.getElementById("svg-output").value;
+        if (output) {
+          navigator.clipboard.writeText(output).then(() => {
+            showInfo("Optimized SVG copied to clipboard!");
+          });
+        }
+      }
+
+      // Shape Generator
+      function updateShapeGenerator() {
+        const type = document.getElementById("shape-type").value;
+        const width = parseInt(document.getElementById("shape-width").value) || 100;
+        const height = parseInt(document.getElementById("shape-height").value) || 100;
+        const fill = document.getElementById("shape-fill").value;
+        const stroke = document.getElementById("shape-stroke").value;
+        const strokeWidth = parseFloat(document.getElementById("shape-stroke-width").value) || 0;
+
+        // Show/hide controls based on shape type
+        document.getElementById("width-control").style.display = ["rect", "ellipse", "path"].includes(type) ? "flex" : "none";
+        document.getElementById("height-control").style.display = ["rect", "ellipse", "path"].includes(type) ? "flex" : "none";
+        document.getElementById("radius-control").style.display = type === "circle" ? "flex" : "none";
+        document.getElementById("rx-control").style.display = type === "ellipse" ? "flex" : "none";
+        document.getElementById("ry-control").style.display = type === "ellipse" ? "flex" : "none";
+
+        let svg = "";
+        const viewBox = `0 0 ${width} ${height}`;
+
+        switch (type) {
+          case "circle":
+            const radius = parseInt(document.getElementById("shape-radius").value) || 50;
+            svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">
+  <circle cx="${width / 2}" cy="${height / 2}" r="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+</svg>`;
+            break;
+          case "rect":
+            svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">
+  <rect x="0" y="0" width="${width}" height="${height}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+</svg>`;
+            break;
+          case "ellipse":
+            const rx = parseInt(document.getElementById("shape-rx").value) || 50;
+            const ry = parseInt(document.getElementById("shape-ry").value) || 30;
+            svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">
+  <ellipse cx="${width / 2}" cy="${height / 2}" rx="${rx}" ry="${ry}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+</svg>`;
+            break;
+          case "line":
+            svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">
+  <line x1="10" y1="10" x2="${width - 10}" y2="${height - 10}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+</svg>`;
+            break;
+          case "polygon":
+            const points = `${width / 2},10 ${width - 10},${height - 10} 10,${height - 10}`;
+            svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">
+  <polygon points="${points}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+</svg>`;
+            break;
+          case "polyline":
+            const polylinePoints = `10,10 ${width / 2},${height / 2} ${width - 10},10`;
+            svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">
+  <polyline points="${polylinePoints}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" />
+</svg>`;
+            break;
+          case "path":
+            svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">
+  <path d="M 10,${height / 2} Q ${width / 2},10 ${width - 10},${height / 2} T ${width - 10},${height - 10}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+</svg>`;
+            break;
+        }
+
+        document.getElementById("generator-preview").innerHTML = svg;
+        document.getElementById("generated-svg").value = svg;
+      }
+
+      function copyGeneratedSVG() {
+        const svg = document.getElementById("generated-svg").value;
+        if (svg) {
+          navigator.clipboard.writeText(svg).then(() => {
+            showInfo("SVG copied to clipboard!");
+          });
+        }
+      }
+
+      function downloadGeneratedSVG() {
+        const svg = document.getElementById("generated-svg").value;
+        if (svg) {
+          const blob = new Blob([svg], { type: "image/svg+xml" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "shape.svg";
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      }
+
+      // Converter
+      function convertToDataURI() {
+        const input = document.getElementById("converter-input").value.trim();
+        const errorDiv = document.getElementById("converter-error");
+        const preview = document.getElementById("converter-preview");
+        const dataURIOutput = document.getElementById("data-uri-output");
+        const cssOutput = document.getElementById("css-output");
+
+        if (!input) {
+          errorDiv.innerHTML = '<div class="error">Please enter SVG code</div>';
+          return;
+        }
+
+        try {
+          // Validate SVG
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(input, "image/svg+xml");
+          const svg = doc.querySelector("svg");
+
+          if (!svg) {
+            throw new Error("Invalid SVG format");
+          }
+
+          // Encode to base64
+          const svgString = new XMLSerializer().serializeToString(svg);
+          const encoded = btoa(unescape(encodeURIComponent(svgString)));
+          const dataURI = `data:image/svg+xml;base64,${encoded}`;
+
+          // Update UI
+          dataURIOutput.value = dataURI;
+          cssOutput.value = `background-image: url("${dataURI}");`;
+          preview.innerHTML = `<img src="${dataURI}" alt="SVG preview" style="max-width: 100%; max-height: 100%;" />`;
+          errorDiv.innerHTML = "";
+
+          // Save to sessionStorage
+          sessionStorage.setItem("svg_converter_input", input);
+          sessionStorage.setItem("svg_converter_datauri", dataURI);
+        } catch (error) {
+          errorDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+          dataURIOutput.value = "";
+          cssOutput.value = "";
+          preview.innerHTML = "";
+        }
+      }
+
+      function clearConverter() {
+        document.getElementById("converter-input").value = "";
+        document.getElementById("data-uri-output").value = "";
+        document.getElementById("css-output").value = "";
+        document.getElementById("converter-preview").innerHTML = "";
+        document.getElementById("converter-error").innerHTML = "";
+        sessionStorage.removeItem("svg_converter_input");
+        sessionStorage.removeItem("svg_converter_datauri");
+      }
+
+      function copyDataURI() {
+        const dataURI = document.getElementById("data-uri-output").value;
+        if (dataURI) {
+          navigator.clipboard.writeText(dataURI).then(() => {
+            showInfo("Data URI copied to clipboard!");
+          });
+        }
+      }
+
+      function showInfo(message) {
+        // Simple alert for now, could be improved with a toast
+        const info = document.createElement("div");
+        info.className = "info";
+        info.textContent = message;
+        info.style.position = "fixed";
+        info.style.top = "20px";
+        info.style.right = "20px";
+        info.style.zIndex = "1000";
+        document.body.appendChild(info);
+        setTimeout(() => info.remove(), 3000);
+      }
+
+      // Load from sessionStorage on page load
+      window.addEventListener("DOMContentLoaded", () => {
+        const savedInput = sessionStorage.getItem("svg_optimizer_input");
+        const savedOutput = sessionStorage.getItem("svg_optimizer_output");
+        if (savedInput) {
+          document.getElementById("svg-input").value = savedInput;
+        }
+        if (savedOutput) {
+          document.getElementById("svg-output").value = savedOutput;
+        }
+
+        const savedConverterInput = sessionStorage.getItem("svg_converter_input");
+        const savedConverterDataURI = sessionStorage.getItem("svg_converter_datauri");
+        if (savedConverterInput) {
+          document.getElementById("converter-input").value = savedConverterInput;
+        }
+        if (savedConverterDataURI) {
+          document.getElementById("data-uri-output").value = savedConverterDataURI;
+          document.getElementById("css-output").value = `background-image: url("${savedConverterDataURI}");`;
+        }
+
+        // Initialize shape generator
+        updateShapeGenerator();
+      });
+
+      // Auto-optimize on input (debounced)
+      let optimizeTimeout;
+      document.getElementById("svg-input").addEventListener("input", () => {
+        clearTimeout(optimizeTimeout);
+        optimizeTimeout = setTimeout(() => {
+          if (document.getElementById("svg-input").value.trim()) {
+            optimizeSVG();
+          }
+        }, 500);
+      });
+    </script>
+  </body>
+</html>
+
