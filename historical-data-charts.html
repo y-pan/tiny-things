@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Historical data — transform &amp; chart</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background: #f5f7fb;
+        padding: 20px;
+        color: #1f2937;
+      }
+      .wrap {
+        max-width: none;
+        width: 100%;
+        margin: 0 auto;
+      }
+      h1 {
+        margin-bottom: 8px;
+        color: #111827;
+        font-size: 1.35rem;
+      }
+      .sub {
+        color: #6b7280;
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+        line-height: 1.5;
+      }
+      .panels {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      @media (max-width: 900px) {
+        .panels {
+          grid-template-columns: 1fr;
+        }
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.85rem;
+        margin-bottom: 6px;
+        color: #374151;
+      }
+      textarea {
+        width: 100%;
+        min-height: 220px;
+        padding: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        font-family:
+          ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        resize: vertical;
+        background: #fff;
+      }
+      textarea:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+      .actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+      }
+      button {
+        background: #4f46e5;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #4338ca;
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      .err {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        white-space: pre-wrap;
+        font-family: ui-monospace, monospace;
+        display: none;
+      }
+      .err.visible {
+        display: block;
+        margin-bottom: 16px;
+      }
+      #charts {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      .chart-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 14px 14px 8px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        width: 100%;
+      }
+      .chart-card h2 {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #111827;
+      }
+      .chart-canvas-wrap {
+        position: relative;
+        width: 100%;
+        height: min(320px, 42vw);
+        min-height: 220px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Historical data — transform &amp; chart</h1>
+      <p class="sub">
+        Paste a JSON array of objects. In transforms, map each field name to a
+        function that receives that field’s value (numbers only; string fields
+        are skipped for charting). Use <code>Math</code> and any in-scope
+        expression. Click <strong>Draw charts</strong> when ready.
+      </p>
+      <div class="err" id="err" aria-live="polite"></div>
+      <div class="panels">
+        <div>
+          <label for="data">Data (JSON array)</label>
+          <textarea id="data" spellcheck="false"></textarea>
+        </div>
+        <div>
+          <label for="transforms">Transforms (JavaScript object)</label>
+          <textarea id="transforms" spellcheck="false"></textarea>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" id="draw">Draw charts</button>
+      </div>
+      <div id="charts"></div>
+    </div>
+    <script>
+      const LS_DATA = "historical-data-charts.v1.data";
+      const LS_TRANSFORMS = "historical-data-charts.v1.transforms";
+
+      /** @type {Map<string, Chart>} */
+      const chartInstances = new Map();
+
+      function loadFromStorage() {
+        try {
+          const d = sessionStorage.getItem(LS_DATA);
+          const t = sessionStorage.getItem(LS_TRANSFORMS);
+          if (d !== null) document.getElementById("data").value = d;
+          if (t !== null) document.getElementById("transforms").value = t;
+        } catch (_) {
+          /* storage unavailable */
+        }
+      }
+
+      function persistToStorage() {
+        try {
+          sessionStorage.setItem(
+            LS_DATA,
+            document.getElementById("data").value,
+          );
+          sessionStorage.setItem(
+            LS_TRANSFORMS,
+            document.getElementById("transforms").value,
+          );
+        } catch (_) {
+          /* quota or private mode */
+        }
+      }
+
+      function showErr(msg) {
+        const el = document.getElementById("err");
+        el.textContent = msg;
+        el.classList.toggle("visible", Boolean(msg));
+      }
+
+      function collectKeys(rows) {
+        const keys = new Set();
+        for (const row of rows) {
+          if (row && typeof row === "object" && !Array.isArray(row)) {
+            Object.keys(row).forEach((k) => keys.add(k));
+          }
+        }
+        return keys;
+      }
+
+      function isStringField(rows, key) {
+        for (const row of rows) {
+          if (!row || typeof row !== "object") continue;
+          if (!Object.prototype.hasOwnProperty.call(row, key)) continue;
+          const v = row[key];
+          if (v != null && typeof v === "string") return true;
+        }
+        return false;
+      }
+
+      function parseTransforms(text) {
+        const trimmed = text.trim();
+        if (!trimmed) return {};
+        const fn = new Function(`"use strict"; return (${trimmed});`);
+        const obj = fn();
+        if (obj === null || typeof obj !== "object" || Array.isArray(obj)) {
+          throw new Error("Transforms must evaluate to a plain object.");
+        }
+        return obj;
+      }
+
+      function draw() {
+        showErr("");
+        for (const ch of chartInstances.values()) ch.destroy();
+        chartInstances.clear();
+        document.getElementById("charts").innerHTML = "";
+
+        let rows;
+        try {
+          rows = JSON.parse(document.getElementById("data").value);
+        } catch (e) {
+          showErr("Data JSON parse error:\n" + (e && e.message));
+          return;
+        }
+        if (!Array.isArray(rows)) {
+          showErr("Data must be a JSON array.");
+          return;
+        }
+
+        let transforms;
+        try {
+          transforms = parseTransforms(
+            document.getElementById("transforms").value,
+          );
+        } catch (e) {
+          showErr("Transforms error:\n" + (e && e.message));
+          return;
+        }
+
+        persistToStorage();
+
+        const keys = [...collectKeys(rows)].filter(
+          (k) => !isStringField(rows, k),
+        );
+        const labels = rows.map((row, i) =>
+          row && typeof row.date === "string" ? row.date : String(i),
+        );
+
+        const chartRoot = document.getElementById("charts");
+        const palette = [
+          "#4f46e5",
+          "#059669",
+          "#d97706",
+          "#dc2626",
+          "#7c3aed",
+          "#0d9488",
+          "#db2777",
+          "#2563eb",
+        ];
+
+        for (const key of keys.sort()) {
+          const identity = (v) => v;
+          const fn = transforms[key];
+          const mapper =
+            typeof fn === "function"
+              ? fn
+              : typeof fn === "undefined"
+                ? identity
+                : null;
+          if (mapper === null) {
+            showErr(
+              `Transform for "${key}" must be a function (or omit key for identity).`,
+            );
+            return;
+          }
+
+          const series = [];
+          for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const raw =
+              row &&
+              typeof row === "object" &&
+              Object.prototype.hasOwnProperty.call(row, key)
+                ? row[key]
+                : undefined;
+            if (raw != null && typeof raw === "string") {
+              series.push(null);
+              continue;
+            }
+            let y;
+            try {
+              y = mapper(raw);
+            } catch (e) {
+              showErr(
+                `Transform error for field "${key}" at index ${i}:\n${e && e.message}`,
+              );
+              return;
+            }
+            if (y != null && typeof y === "string") {
+              showErr(
+                `After transform, "${key}" at index ${i} is a string; only numeric series are charted.`,
+              );
+              return;
+            }
+            series.push(typeof y === "number" && Number.isFinite(y) ? y : null);
+          }
+
+          if (!series.some((v) => v != null)) continue;
+
+          const card = document.createElement("div");
+          card.className = "chart-card";
+          const title = document.createElement("h2");
+          title.textContent = key;
+          const wrap = document.createElement("div");
+          wrap.className = "chart-canvas-wrap";
+          const canvas = document.createElement("canvas");
+          wrap.appendChild(canvas);
+          card.appendChild(title);
+          card.appendChild(wrap);
+          chartRoot.appendChild(card);
+
+          const color = palette[chartInstances.size % palette.length];
+          const ctx = canvas.getContext("2d");
+          const chart = new Chart(ctx, {
+            type: "line",
+            data: {
+              labels,
+              datasets: [
+                {
+                  label: key,
+                  data: series,
+                  borderColor: color,
+                  backgroundColor: color + "22",
+                  tension: 0.15,
+                  spanGaps: false,
+                  pointRadius: 2,
+                  borderWidth: 2,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+              },
+              scales: {
+                x: {
+                  ticks: {
+                    maxRotation: 45,
+                    minRotation: 0,
+                    font: { size: 10 },
+                  },
+                  grid: { color: "#f3f4f6" },
+                },
+                y: {
+                  ticks: { font: { size: 10 } },
+                  grid: { color: "#f3f4f6" },
+                },
+              },
+            },
+          });
+          chartInstances.set(key, chart);
+        }
+
+        if (chartInstances.size === 0) {
+          showErr("No numeric fields to chart after skipping string fields.");
+        }
+      }
+
+      document.getElementById("draw").addEventListener("click", draw);
+      loadFromStorage();
+    </script>
+  </body>
+</html>
