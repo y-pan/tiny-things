@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Combine arrays</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background: #f5f7fb;
+        padding: 20px;
+        color: #1f2937;
+      }
+      .wrap {
+        max-width: none;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .page-title-row {
+        margin-bottom: 12px;
+      }
+      .page-title-row > label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.85rem;
+        margin-bottom: 6px;
+        color: #374151;
+      }
+      .page-title-input {
+        width: 100%;
+        max-width: 42rem;
+        font-size: 1.35rem;
+        font-weight: 600;
+        color: #111827;
+        padding: 8px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #fff;
+        font-family: inherit;
+      }
+      .page-title-input:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+      .sub {
+        color: #6b7280;
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+        line-height: 1.5;
+      }
+      .panels {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      .panels .panel-span-2 {
+        grid-column: 1 / -1;
+      }
+      @media (max-width: 900px) {
+        .panels {
+          grid-template-columns: 1fr;
+        }
+        .panels .panel-span-2 {
+          grid-column: 1;
+        }
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.85rem;
+        margin-bottom: 6px;
+        color: #374151;
+      }
+      textarea,
+      .text-input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        font-family:
+          ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        background: #fff;
+      }
+      textarea {
+        min-height: 200px;
+        resize: vertical;
+      }
+      .text-input {
+        min-height: auto;
+        font-family: inherit;
+        font-size: 0.9rem;
+      }
+      textarea:focus,
+      .text-input:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+      textarea.output {
+        min-height: 280px;
+        background: #f9fafb;
+      }
+      .join-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+      }
+      .join-row .field {
+        flex: 1;
+        min-width: 200px;
+      }
+      .join-row .field > label {
+        margin-bottom: 6px;
+      }
+      select.join-select {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        font-size: 0.875rem;
+        background: #fff;
+        color: #1f2937;
+      }
+      select.join-select:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+      .actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+      button {
+        background: #4f46e5;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #4338ca;
+      }
+      button.secondary {
+        background: #fff;
+        color: #374151;
+        border: 1px solid #e5e7eb;
+      }
+      button.secondary:hover {
+        background: #f9fafb;
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      .err {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        white-space: pre-wrap;
+        font-family: ui-monospace, monospace;
+        display: none;
+        margin-bottom: 16px;
+      }
+      .err.visible {
+        display: block;
+      }
+      .opt-hint {
+        font-size: 0.75rem;
+        color: #6b7280;
+        font-weight: 400;
+        margin-top: 6px;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="page-title-row">
+        <label for="pageTitle">Title</label>
+        <input
+          type="text"
+          id="pageTitle"
+          class="page-title-input"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+      <p class="sub">
+        Paste two <strong>JSON arrays</strong> of objects. This is an
+        <strong>SQL-style inner join</strong> on <em>matching values</em>: pick
+        the join column name for <strong>Array A</strong> and for
+        <strong>Array B</strong> separately (they need not match). Rows with no
+        counterpart, or missing that property, are <strong>ignored</strong>.
+        Blur a data textarea to refresh join dropdowns and, if the field map
+        is still empty, fill a default <code>{ name, value }</code> per column.
+        Map functions: return <code>(row) =&gt; ({ name: &quot;out_key&quot;, value:
+        … })</code> to set the <strong>output field name</strong> and value (the
+        left-hand key in the map is only for editing). Any other plain object is
+        spread into multiple output keys. Use <code>{}</code> to shallow-copy
+        all fields (B overwrites A on clash). Duplicate join values use a
+        Cartesian pairing.
+      </p>
+      <div class="err" id="err" aria-live="polite"></div>
+      <div class="panels">
+        <div>
+          <label for="dataLeft">Array A (JSON array)</label>
+          <textarea id="dataLeft" spellcheck="false" placeholder='[
+  { "id": 1, "name": "Ada", "score": 90 },
+  { "id": 2, "name": "Bob", "score": 72 }
+]'></textarea>
+        </div>
+        <div>
+          <label for="dataRight">Array B (JSON array)</label>
+          <textarea id="dataRight" spellcheck="false" placeholder='[
+  { "id": 1, "city": "NYC", "tier": "A" },
+  { "id": 2, "city": "SEA", "tier": "B" }
+]'></textarea>
+        </div>
+        <div class="panel-span-2">
+          <label id="joinFieldsLabel">Join columns (values matched with <code>===</code>)</label>
+          <div class="join-row" role="group" aria-labelledby="joinFieldsLabel">
+            <div class="field">
+              <label for="joinFieldLeft">Array A</label>
+              <select id="joinFieldLeft" class="join-select" aria-describedby="joinHint"></select>
+            </div>
+            <div class="field">
+              <label for="joinFieldRight">Array B</label>
+              <select id="joinFieldRight" class="join-select" aria-describedby="joinHint"></select>
+            </div>
+          </div>
+          <p class="opt-hint" id="joinHint">
+            Inner join: column names can differ (e.g. <code>userId</code> on A
+            and <code>id</code> on B). Unmatched rows are dropped. Dropdowns
+            refresh whenever Array A or B parses as valid JSON (typing, paste,
+            or blur).
+          </p>
+        </div>
+        <div>
+          <label for="renameLeft">Array A — field map (JavaScript object)</label>
+          <textarea
+            id="renameLeft"
+            spellcheck="false"
+            placeholder='{
+  "close": (row) => ({ name: "market_close", value: row["close"] }),
+  "id": (row) => ({ name: "id", value: row["id"] })
+}'
+          ></textarea>
+          <p class="opt-hint">
+            Blur Array A with an empty map to auto-fill. Use
+            <code>(row) =&gt; ({ name: &quot;output_name&quot;, value: row[&quot;src&quot;] })</code>
+            to rename: <code>name</code> is the JSON key, <code>value</code> is
+            the cell. Other plain objects are spread as multiple keys. Empty
+            <code>{}</code> copies all fields from A.
+          </p>
+        </div>
+        <div>
+          <label for="renameRight">Array B — field map (JavaScript object)</label>
+          <textarea
+            id="renameRight"
+            spellcheck="false"
+            placeholder='{
+  "city": (row) => ({ name: "city", value: row["city"] }),
+  "tier": (row) => ({ name: "tier", value: row["tier"] })
+}'
+          ></textarea>
+          <p class="opt-hint">
+            Blur Array B with an empty map to auto-fill. Same
+            <code>{ name, value }</code> rename rules as Array A. Empty
+            <code>{}</code> copies all fields from B.
+          </p>
+        </div>
+        <div class="panel-span-2">
+          <label for="output">Result (read-only)</label>
+          <textarea id="output" class="output" readonly spellcheck="false" placeholder="Click Combine arrays to fill this."></textarea>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button" id="combine">Combine arrays</button>
+        <button type="button" id="copyOut" class="secondary">Copy output</button>
+      </div>
+    </div>
+    <script>
+      const DEFAULT_PAGE_TITLE = "Combine arrays";
+      const LS_PAGE_TITLE = "combine-arrays.v1.pageTitle";
+      const LS_DATA_LEFT = "combine-arrays.v1.dataLeft";
+      const LS_DATA_RIGHT = "combine-arrays.v1.dataRight";
+      const LS_JOIN_FIELD_LEFT = "combine-arrays.v1.joinFieldLeft";
+      const LS_JOIN_FIELD_RIGHT = "combine-arrays.v1.joinFieldRight";
+      const LS_RENAME_LEFT = "combine-arrays.v1.renameLeft";
+      const LS_RENAME_RIGHT = "combine-arrays.v1.renameRight";
+
+      function showErr(msg) {
+        const el = document.getElementById("err");
+        el.textContent = msg;
+        el.classList.toggle("visible", Boolean(msg));
+      }
+
+      function syncDocumentTitleFromInput() {
+        const el = document.getElementById("pageTitle");
+        if (!el) return;
+        const v = el.value.trim();
+        document.title = v || DEFAULT_PAGE_TITLE;
+      }
+
+      function persistPageTitle() {
+        try {
+          const el = document.getElementById("pageTitle");
+          if (el) sessionStorage.setItem(LS_PAGE_TITLE, el.value);
+        } catch (_) {}
+      }
+
+      function persistAll() {
+        try {
+          persistPageTitle();
+          sessionStorage.setItem(LS_DATA_LEFT, document.getElementById("dataLeft").value);
+          sessionStorage.setItem(LS_DATA_RIGHT, document.getElementById("dataRight").value);
+          sessionStorage.setItem(
+            LS_JOIN_FIELD_LEFT,
+            document.getElementById("joinFieldLeft").value,
+          );
+          sessionStorage.setItem(
+            LS_JOIN_FIELD_RIGHT,
+            document.getElementById("joinFieldRight").value,
+          );
+          sessionStorage.setItem(LS_RENAME_LEFT, document.getElementById("renameLeft").value);
+          sessionStorage.setItem(LS_RENAME_RIGHT, document.getElementById("renameRight").value);
+        } catch (_) {}
+      }
+
+      function loadFromStorage() {
+        try {
+          const titleEl = document.getElementById("pageTitle");
+          if (titleEl) {
+            const s = sessionStorage.getItem(LS_PAGE_TITLE);
+            if (s !== null) titleEl.value = s;
+            else titleEl.value = DEFAULT_PAGE_TITLE;
+            syncDocumentTitleFromInput();
+          }
+          const dl = sessionStorage.getItem(LS_DATA_LEFT);
+          const dr = sessionStorage.getItem(LS_DATA_RIGHT);
+          const rl = sessionStorage.getItem(LS_RENAME_LEFT);
+          const rr = sessionStorage.getItem(LS_RENAME_RIGHT);
+          if (dl !== null) document.getElementById("dataLeft").value = dl;
+          if (dr !== null) document.getElementById("dataRight").value = dr;
+          if (rl !== null) document.getElementById("renameLeft").value = rl;
+          if (rr !== null) document.getElementById("renameRight").value = rr;
+        } catch (_) {}
+      }
+
+      function collectKeysFromRows(rows) {
+        const keys = new Set();
+        if (!Array.isArray(rows)) return keys;
+        for (const row of rows) {
+          if (row && typeof row === "object" && !Array.isArray(row)) {
+            Object.keys(row).forEach((k) => keys.add(k));
+          }
+        }
+        return keys;
+      }
+
+      /**
+       * Lenient parse: BOM strip, trailing commas before ] or }, then JSON.parse.
+       * Returns { ok, data, reason, parseError } so UI can show why join keys are empty.
+       */
+      function parseJsonArrayFromText(raw) {
+        let t = String(raw).trim().replace(/^\uFEFF/, "");
+        if (!t) return { ok: false, data: null, reason: "empty" };
+
+        function wrapArray(parsed) {
+          if (!Array.isArray(parsed)) {
+            return { ok: false, data: null, reason: "not-array" };
+          }
+          return { ok: true, data: parsed, reason: "ok" };
+        }
+
+        function tryParse(s) {
+          const parsed = JSON.parse(s);
+          return wrapArray(parsed);
+        }
+
+        try {
+          const r = tryParse(t);
+          if (!r.ok) return r;
+          return r;
+        } catch (e1) {
+          let loosened = t;
+          let prev;
+          do {
+            prev = loosened;
+            loosened = loosened.replace(/,\s*([\]}])/g, "$1");
+          } while (loosened !== prev);
+          try {
+            const r = tryParse(loosened);
+            if (!r.ok) return r;
+            return r;
+          } catch (e2) {
+            return {
+              ok: false,
+              data: null,
+              reason: "parse",
+              parseError: String((e2 && e2.message) || e2),
+            };
+          }
+        }
+      }
+
+      function parseArrayFromDataTextarea(elementId) {
+        const res = parseJsonArrayFromText(
+          document.getElementById(elementId).value,
+        );
+        return res.ok ? res.data : null;
+      }
+
+      function generateDefaultFieldMapString(keys) {
+        const lines = keys.map((k) => {
+          const kj = JSON.stringify(k);
+          return `  ${kj}: (row) => ({ name: ${kj}, value: row[${kj}] })`;
+        });
+        return `{\n${lines.join(",\n")}\n}`;
+      }
+
+      function fillFieldMapIfEmpty(which) {
+        const mapId = which === "left" ? "renameLeft" : "renameRight";
+        const dataId = which === "left" ? "dataLeft" : "dataRight";
+        const el = document.getElementById(mapId);
+        if (el.value.trim() !== "") return;
+        const rows = parseArrayFromDataTextarea(dataId);
+        if (!rows || rows.length === 0) return;
+        const keys = [...collectKeysFromRows(rows)].sort((a, b) =>
+          a.localeCompare(b, undefined, { sensitivity: "base" }),
+        );
+        if (keys.length === 0) return;
+        el.value = generateDefaultFieldMapString(keys);
+      }
+
+      function pickJoinSelectValue(selectEl, sortedKeys, storageKey, previousValue) {
+        if (sortedKeys.length === 0) return;
+        const stored = sessionStorage.getItem(storageKey);
+        if (
+          stored !== null &&
+          stored !== "" &&
+          sortedKeys.includes(stored)
+        ) {
+          selectEl.value = stored;
+          return;
+        }
+        if (previousValue && sortedKeys.includes(previousValue)) {
+          selectEl.value = previousValue;
+          return;
+        }
+        if (sortedKeys.includes("id")) {
+          selectEl.value = "id";
+          return;
+        }
+        selectEl.value = sortedKeys[0];
+      }
+
+      function joinSelectPlaceholder(parseResult, keysLen) {
+        if (keysLen > 0) return "";
+        if (!parseResult.ok) {
+          if (parseResult.reason === "empty") return "(enter JSON array above)";
+          if (parseResult.reason === "not-array")
+            return "(root must be an array [...])";
+          if (parseResult.reason === "parse") {
+            const msg = parseResult.parseError
+              ? parseResult.parseError.slice(0, 80)
+              : "syntax error";
+            return `(invalid JSON — ${msg})`;
+          }
+          return "(cannot read data)";
+        }
+        return "(no object keys in rows)";
+      }
+
+      function fillJoinSelect(sel, sortedKeys, parseResult) {
+        sel.innerHTML = "";
+        if (sortedKeys.length > 0) {
+          for (const k of sortedKeys) {
+            const o = document.createElement("option");
+            o.value = k;
+            o.textContent = k;
+            sel.appendChild(o);
+          }
+          return;
+        }
+        const o = document.createElement("option");
+        o.value = "";
+        o.textContent = joinSelectPlaceholder(parseResult, sortedKeys.length);
+        o.disabled = true;
+        sel.appendChild(o);
+      }
+
+      function syncJoinDropdowns() {
+        const resL = parseJsonArrayFromText(
+          document.getElementById("dataLeft").value,
+        );
+        const resR = parseJsonArrayFromText(
+          document.getElementById("dataRight").value,
+        );
+        const left = resL.ok ? resL.data : null;
+        const right = resR.ok ? resR.data : null;
+
+        const selL = document.getElementById("joinFieldLeft");
+        const selR = document.getElementById("joinFieldRight");
+        const prevL = selL.value;
+        const prevR = selR.value;
+
+        const keysL = left
+          ? [...collectKeysFromRows(left)].sort((a, b) =>
+              a.localeCompare(b, undefined, { sensitivity: "base" }),
+            )
+          : [];
+        const keysR = right
+          ? [...collectKeysFromRows(right)].sort((a, b) =>
+              a.localeCompare(b, undefined, { sensitivity: "base" }),
+            )
+          : [];
+
+        fillJoinSelect(selL, keysL, resL);
+        fillJoinSelect(selR, keysR, resR);
+
+        if (keysL.length) {
+          pickJoinSelectValue(selL, keysL, LS_JOIN_FIELD_LEFT, prevL);
+        } else {
+          selL.value = "";
+        }
+
+        if (keysR.length) {
+          pickJoinSelectValue(selR, keysR, LS_JOIN_FIELD_RIGHT, prevR);
+        } else {
+          selR.value = "";
+        }
+      }
+
+      /** After paste, value updates after the paste event; defer sync. */
+      function syncJoinDropdownsAfterPaste() {
+        setTimeout(() => {
+          syncJoinDropdowns();
+          persistAll();
+        }, 0);
+      }
+
+      function onDataInput() {
+        syncJoinDropdowns();
+        persistAll();
+      }
+
+      function onDataTextareaBlur(which) {
+        syncJoinDropdowns();
+        fillFieldMapIfEmpty(which);
+        persistAll();
+      }
+
+      /** True for `{}`-style objects to merge as multiple output columns (not arrays, dates, etc.). */
+      function isPlainObjectForSpread(v) {
+        if (v === null || typeof v !== "object") return false;
+        if (Array.isArray(v)) return false;
+        if (v instanceof Date) return false;
+        const proto = Object.getPrototypeOf(v);
+        return proto === Object.prototype || proto === null;
+      }
+
+      /**
+       * Flexible rename: `{ name: "output_key", value: expr }` → one output
+       * field `output_key` (not spread; map key in the UI is ignored for naming).
+       */
+      function isNameValueRecord(result) {
+        if (!isPlainObjectForSpread(result)) return false;
+        const ks = Object.keys(result);
+        if (ks.length !== 2) return false;
+        if (!Object.prototype.hasOwnProperty.call(result, "name")) return false;
+        if (!Object.prototype.hasOwnProperty.call(result, "value")) return false;
+        return typeof result.name === "string";
+      }
+
+      function parseMap(text, label) {
+        const trimmed = text.trim();
+        if (!trimmed) return {};
+        const fn = new Function(`"use strict"; return (${trimmed});`);
+        const obj = fn();
+        if (obj === null || typeof obj !== "object" || Array.isArray(obj)) {
+          throw new Error(`${label} must evaluate to a plain object.`);
+        }
+        for (const key of Object.keys(obj)) {
+          if (typeof obj[key] !== "function") {
+            throw new Error(`${label}: "${key}" must be a function.`);
+          }
+        }
+        return obj;
+      }
+
+      function projectRow(row, map, label, index) {
+        if (!row || typeof row !== "object" || Array.isArray(row)) {
+          return {};
+        }
+        const keys = Object.keys(map);
+        if (keys.length === 0) {
+          return { ...row };
+        }
+        const out = {};
+        for (const mapKey of keys) {
+          const fn = map[mapKey];
+          try {
+            const result = fn(row);
+            if (isNameValueRecord(result)) {
+              out[result.name] = result.value;
+            } else if (isPlainObjectForSpread(result)) {
+              for (const [k, val] of Object.entries(result)) {
+                out[k] = val;
+              }
+            } else {
+              out[mapKey] = result;
+            }
+          } catch (e) {
+            throw new Error(
+              `${label} key "${mapKey}" at row index ${index}: ${e && e.message}`,
+            );
+          }
+        }
+        return out;
+      }
+
+      function groupByJoinKey(rows, joinKey) {
+        const m = new Map();
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+          if (!Object.prototype.hasOwnProperty.call(row, joinKey)) continue;
+          const k = row[joinKey];
+          if (!m.has(k)) m.set(k, []);
+          m.get(k).push(row);
+        }
+        return m;
+      }
+
+      function combine() {
+        showErr("");
+        const resL = parseJsonArrayFromText(
+          document.getElementById("dataLeft").value,
+        );
+        const resR = parseJsonArrayFromText(
+          document.getElementById("dataRight").value,
+        );
+        if (!resL.ok) {
+          showErr(
+            "Array A: " +
+              (resL.reason === "empty"
+                ? "empty"
+                : resL.reason === "not-array"
+                  ? "root value must be a JSON array [...]"
+                  : resL.parseError || "invalid JSON"),
+          );
+          return;
+        }
+        if (!resR.ok) {
+          showErr(
+            "Array B: " +
+              (resR.reason === "empty"
+                ? "empty"
+                : resR.reason === "not-array"
+                  ? "root value must be a JSON array [...]"
+                  : resR.parseError || "invalid JSON"),
+          );
+          return;
+        }
+        const left = resL.data;
+        const right = resR.data;
+
+        const joinLeft = document.getElementById("joinFieldLeft").value;
+        const joinRight = document.getElementById("joinFieldRight").value;
+        if (!joinLeft || !joinRight) {
+          showErr(
+            "Select a join column for both Array A and Array B (blur data boxes to refresh options).",
+          );
+          return;
+        }
+
+        let mapLeft;
+        let mapRight;
+        try {
+          mapLeft = parseMap(document.getElementById("renameLeft").value, "Array A map");
+        } catch (e) {
+          showErr(e && e.message);
+          return;
+        }
+        try {
+          mapRight = parseMap(document.getElementById("renameRight").value, "Array B map");
+        } catch (e) {
+          showErr(e && e.message);
+          return;
+        }
+
+        const leftByKey = groupByJoinKey(left, joinLeft);
+        const rightByKey = groupByJoinKey(right, joinRight);
+        const out = [];
+
+        /* Inner join: only keys present in both maps. Unmatched rows are omitted. */
+        const commonKeys = [];
+        for (const k of leftByKey.keys()) {
+          if (rightByKey.has(k)) commonKeys.push(k);
+        }
+        commonKeys.sort((a, b) => {
+          const sa = String(a);
+          const sb = String(b);
+          return sa.localeCompare(sb, undefined, { sensitivity: "base" });
+        });
+
+        for (const k of commonKeys) {
+          const ls = leftByKey.get(k);
+          const rs = rightByKey.get(k);
+          let li = 0;
+          for (const lrow of ls) {
+            for (const rrow of rs) {
+              try {
+                const aPart = projectRow(lrow, mapLeft, "Array A map", li);
+                const bPart = projectRow(
+                  rrow,
+                  mapRight,
+                  "Array B map",
+                  out.length,
+                );
+                out.push({ ...aPart, ...bPart });
+              } catch (e) {
+                showErr(e && e.message);
+                return;
+              }
+            }
+            li++;
+          }
+        }
+
+        document.getElementById("output").value = JSON.stringify(out, null, 2);
+        persistAll();
+      }
+
+      function copyOutput() {
+        const ta = document.getElementById("output");
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+        try {
+          navigator.clipboard.writeText(ta.value);
+        } catch (_) {
+          document.execCommand("copy");
+        }
+      }
+
+      document.getElementById("combine").addEventListener("click", combine);
+      document.getElementById("copyOut").addEventListener("click", copyOutput);
+
+      const pageTitleEl = document.getElementById("pageTitle");
+      pageTitleEl.addEventListener("input", () => {
+        syncDocumentTitleFromInput();
+        persistPageTitle();
+      });
+      pageTitleEl.addEventListener("blur", () => {
+        syncDocumentTitleFromInput();
+        persistPageTitle();
+      });
+
+      ["dataLeft", "dataRight"].forEach((id) => {
+        const el = document.getElementById(id);
+        el.addEventListener("input", onDataInput);
+        el.addEventListener("paste", syncJoinDropdownsAfterPaste);
+      });
+      document
+        .getElementById("dataLeft")
+        .addEventListener("blur", () => onDataTextareaBlur("left"));
+      document
+        .getElementById("dataRight")
+        .addEventListener("blur", () => onDataTextareaBlur("right"));
+
+      ["renameLeft", "renameRight", "joinFieldLeft", "joinFieldRight"].forEach(
+        (id) => {
+          const el = document.getElementById(id);
+          el.addEventListener("input", persistAll);
+          el.addEventListener("change", persistAll);
+          el.addEventListener("blur", persistAll);
+        },
+      );
+
+      loadFromStorage();
+      syncJoinDropdowns();
+    </script>
+  </body>
+</html>

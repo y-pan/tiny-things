@@ -26,25 +26,27 @@
 
 13. [Color](https://y-pan.github.io/tiny-things/color.html)
 
-14. [Diff Keys](https://y-pan.github.io/tiny-things/diff-keys.html)
+14. [Combine Arrays](https://y-pan.github.io/tiny-things/combine-arrays.html)
 
-15. [Flexbox Grid Visualizer](https://y-pan.github.io/tiny-things/flexbox-grid-visualizer.html)
+15. [Diff Keys](https://y-pan.github.io/tiny-things/diff-keys.html)
 
-16. [Format Single Column To Two](https://y-pan.github.io/tiny-things/format-single-column-to-two.html)
+16. [Flexbox Grid Visualizer](https://y-pan.github.io/tiny-things/flexbox-grid-visualizer.html)
 
-17. [Gradient Generator](https://y-pan.github.io/tiny-things/gradient-generator.html)
+17. [Format Single Column To Two](https://y-pan.github.io/tiny-things/format-single-column-to-two.html)
 
-18. [Historical Data Charts](https://y-pan.github.io/tiny-things/historical-data-charts.html)
+18. [Gradient Generator](https://y-pan.github.io/tiny-things/gradient-generator.html)
 
-19. [Random String Generator](https://y-pan.github.io/tiny-things/random-string-generator.html)
+19. [Historical Data Charts](https://y-pan.github.io/tiny-things/historical-data-charts.html)
 
-20. [Regex](https://y-pan.github.io/tiny-things/regex.html)
+20. [Random String Generator](https://y-pan.github.io/tiny-things/random-string-generator.html)
 
-21. [Svg Tool](https://y-pan.github.io/tiny-things/svg-tool.html)
+21. [Regex](https://y-pan.github.io/tiny-things/regex.html)
 
-22. [Time](https://y-pan.github.io/tiny-things/time.html)
+22. [Svg Tool](https://y-pan.github.io/tiny-things/svg-tool.html)
 
-23. [Token](https://y-pan.github.io/tiny-things/token.html)
+23. [Time](https://y-pan.github.io/tiny-things/time.html)
 
-24. [Transition Generator](https://y-pan.github.io/tiny-things/transition-generator.html)
+24. [Token](https://y-pan.github.io/tiny-things/token.html)
+
+25. [Transition Generator](https://y-pan.github.io/tiny-things/transition-generator.html)
 
