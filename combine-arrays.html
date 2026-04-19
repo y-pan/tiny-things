@@ -211,41 +211,59 @@
         the join column name for <strong>Array A</strong> and for
         <strong>Array B</strong> separately (they need not match). Rows with no
         counterpart, or missing that property, are <strong>ignored</strong>.
-        Blur a data textarea to refresh join dropdowns and, if the field map
-        is still empty, fill a default <code>{ name, value }</code> per column.
-        Map functions: return <code>(row) =&gt; ({ name: &quot;out_key&quot;, value:
-        … })</code> to set the <strong>output field name</strong> and value (the
-        left-hand key in the map is only for editing). Any other plain object is
-        spread into multiple output keys. Use <code>{}</code> to shallow-copy
-        all fields (B overwrites A on clash). Duplicate join values use a
-        Cartesian pairing.
+        Blur a data textarea to refresh join dropdowns and, if the field map is
+        still empty, fill a default <code>{ name, value }</code> per column. Map
+        functions: return
+        <code>(row) =&gt; ({ name: &quot;out_key&quot;, value: … })</code> to
+        set the <strong>output field name</strong> and value (the left-hand key
+        in the map is only for editing). Any other plain object is spread into
+        multiple output keys. Use <code>{}</code> to shallow-copy all fields (B
+        overwrites A on clash). Duplicate join values use a Cartesian pairing.
       </p>
       <div class="err" id="err" aria-live="polite"></div>
       <div class="panels">
         <div>
           <label for="dataLeft">Array A (JSON array)</label>
-          <textarea id="dataLeft" spellcheck="false" placeholder='[
+          <textarea
+            id="dataLeft"
+            spellcheck="false"
+            placeholder='[
   { "id": 1, "name": "Ada", "score": 90 },
   { "id": 2, "name": "Bob", "score": 72 }
-]'></textarea>
+]'
+          ></textarea>
         </div>
         <div>
           <label for="dataRight">Array B (JSON array)</label>
-          <textarea id="dataRight" spellcheck="false" placeholder='[
+          <textarea
+            id="dataRight"
+            spellcheck="false"
+            placeholder='[
   { "id": 1, "city": "NYC", "tier": "A" },
   { "id": 2, "city": "SEA", "tier": "B" }
-]'></textarea>
+]'
+          ></textarea>
         </div>
         <div class="panel-span-2">
-          <label id="joinFieldsLabel">Join columns (values matched with <code>===</code>)</label>
+          <label id="joinFieldsLabel"
+            >Join columns (values matched with <code>===</code>)</label
+          >
           <div class="join-row" role="group" aria-labelledby="joinFieldsLabel">
             <div class="field">
               <label for="joinFieldLeft">Array A</label>
-              <select id="joinFieldLeft" class="join-select" aria-describedby="joinHint"></select>
+              <select
+                id="joinFieldLeft"
+                class="join-select"
+                aria-describedby="joinHint"
+              ></select>
             </div>
             <div class="field">
               <label for="joinFieldRight">Array B</label>
-              <select id="joinFieldRight" class="join-select" aria-describedby="joinHint"></select>
+              <select
+                id="joinFieldRight"
+                class="join-select"
+                aria-describedby="joinHint"
+              ></select>
             </div>
           </div>
           <p class="opt-hint" id="joinHint">
@@ -256,7 +274,9 @@
           </p>
         </div>
         <div>
-          <label for="renameLeft">Array A — field map (JavaScript object)</label>
+          <label for="renameLeft"
+            >Array A — field map (JavaScript object)</label
+          >
           <textarea
             id="renameLeft"
             spellcheck="false"
@@ -267,14 +287,19 @@
           ></textarea>
           <p class="opt-hint">
             Blur Array A with an empty map to auto-fill. Use
-            <code>(row) =&gt; ({ name: &quot;output_name&quot;, value: row[&quot;src&quot;] })</code>
+            <code
+              >(row) =&gt; ({ name: &quot;output_name&quot;, value:
+              row[&quot;src&quot;] })</code
+            >
             to rename: <code>name</code> is the JSON key, <code>value</code> is
             the cell. Other plain objects are spread as multiple keys. Empty
             <code>{}</code> copies all fields from A.
           </p>
         </div>
         <div>
-          <label for="renameRight">Array B — field map (JavaScript object)</label>
+          <label for="renameRight"
+            >Array B — field map (JavaScript object)</label
+          >
           <textarea
             id="renameRight"
             spellcheck="false"
@@ -289,14 +314,24 @@
             <code>{}</code> copies all fields from B.
           </p>
         </div>
+
+        <div class="actions">
+          <button type="button" id="combine">Combine arrays</button>
+          <button type="button" id="copyOut" class="secondary">
+            Copy output
+          </button>
+        </div>
+
         <div class="panel-span-2">
           <label for="output">Result (read-only)</label>
-          <textarea id="output" class="output" readonly spellcheck="false" placeholder="Click Combine arrays to fill this."></textarea>
+          <textarea
+            id="output"
+            class="output"
+            readonly
+            spellcheck="false"
+            placeholder="Click Combine arrays to fill this."
+          ></textarea>
         </div>
-      </div>
-      <div class="actions">
-        <button type="button" id="combine">Combine arrays</button>
-        <button type="button" id="copyOut" class="secondary">Copy output</button>
       </div>
     </div>
     <script>
@@ -332,8 +367,14 @@
       function persistAll() {
         try {
           persistPageTitle();
-          sessionStorage.setItem(LS_DATA_LEFT, document.getElementById("dataLeft").value);
-          sessionStorage.setItem(LS_DATA_RIGHT, document.getElementById("dataRight").value);
+          sessionStorage.setItem(
+            LS_DATA_LEFT,
+            document.getElementById("dataLeft").value,
+          );
+          sessionStorage.setItem(
+            LS_DATA_RIGHT,
+            document.getElementById("dataRight").value,
+          );
           sessionStorage.setItem(
             LS_JOIN_FIELD_LEFT,
             document.getElementById("joinFieldLeft").value,
@@ -342,8 +383,14 @@
             LS_JOIN_FIELD_RIGHT,
             document.getElementById("joinFieldRight").value,
           );
-          sessionStorage.setItem(LS_RENAME_LEFT, document.getElementById("renameLeft").value);
-          sessionStorage.setItem(LS_RENAME_RIGHT, document.getElementById("renameRight").value);
+          sessionStorage.setItem(
+            LS_RENAME_LEFT,
+            document.getElementById("renameLeft").value,
+          );
+          sessionStorage.setItem(
+            LS_RENAME_RIGHT,
+            document.getElementById("renameRight").value,
+          );
         } catch (_) {}
       }
 
@@ -383,7 +430,9 @@
        * Returns { ok, data, reason, parseError } so UI can show why join keys are empty.
        */
       function parseJsonArrayFromText(raw) {
-        let t = String(raw).trim().replace(/^\uFEFF/, "");
+        let t = String(raw)
+          .trim()
+          .replace(/^\uFEFF/, "");
         if (!t) return { ok: false, data: null, reason: "empty" };
 
         function wrapArray(parsed) {
@@ -453,14 +502,15 @@
         el.value = generateDefaultFieldMapString(keys);
       }
 
-      function pickJoinSelectValue(selectEl, sortedKeys, storageKey, previousValue) {
+      function pickJoinSelectValue(
+        selectEl,
+        sortedKeys,
+        storageKey,
+        previousValue,
+      ) {
         if (sortedKeys.length === 0) return;
         const stored = sessionStorage.getItem(storageKey);
-        if (
-          stored !== null &&
-          stored !== "" &&
-          sortedKeys.includes(stored)
-        ) {
+        if (stored !== null && stored !== "" && sortedKeys.includes(stored)) {
           selectEl.value = stored;
           return;
         }
@@ -589,7 +639,8 @@
         const ks = Object.keys(result);
         if (ks.length !== 2) return false;
         if (!Object.prototype.hasOwnProperty.call(result, "name")) return false;
-        if (!Object.prototype.hasOwnProperty.call(result, "value")) return false;
+        if (!Object.prototype.hasOwnProperty.call(result, "value"))
+          return false;
         return typeof result.name === "string";
       }
 
@@ -698,13 +749,19 @@
         let mapLeft;
         let mapRight;
         try {
-          mapLeft = parseMap(document.getElementById("renameLeft").value, "Array A map");
+          mapLeft = parseMap(
+            document.getElementById("renameLeft").value,
+            "Array A map",
+          );
         } catch (e) {
           showErr(e && e.message);
           return;
         }
         try {
-          mapRight = parseMap(document.getElementById("renameRight").value, "Array B map");
+          mapRight = parseMap(
+            document.getElementById("renameRight").value,
+            "Array B map",
+          );
         } catch (e) {
           showErr(e && e.message);
           return;
