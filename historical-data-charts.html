@@ -38,12 +38,19 @@
       .panels {
         display: grid;
         grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
         gap: 16px;
         margin-bottom: 16px;
+      }
+      .panels .panel-span-2 {
+        grid-column: 1 / -1;
       }
       @media (max-width: 900px) {
         .panels {
           grid-template-columns: 1fr;
+        }
+        .panels .panel-span-2 {
+          grid-column: 1;
         }
       }
       label {
@@ -134,26 +141,227 @@
         height: min(320px, 42vw);
         min-height: 220px;
       }
+      .chart-options {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px 24px;
+        align-items: flex-start;
+      }
+      .chart-options .opt-block {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 160px;
+      }
+      .chart-options select {
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        font-size: 0.875rem;
+        background: #fff;
+        max-width: min(360px, 100%);
+      }
+      .chart-options .opt-hint {
+        font-size: 0.75rem;
+        color: #6b7280;
+        font-weight: 400;
+      }
+      #yFields {
+        width: 100%;
+        max-width: 100%;
+      }
+      .section-derived {
+        background: linear-gradient(180deg, #ecfdf5 0%, #f5f7fb 100%);
+        border: 1px solid #a7f3d0;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin: 0;
+      }
+      .section-derived > label {
+        color: #065f46;
+      }
+      .y-field-groups {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        width: 100%;
+      }
+      .y-field-group {
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+      }
+      .y-field-group-derived {
+        background: #f0fdf4;
+        border-color: #a7f3d0;
+      }
+      .y-field-subhead {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #6b7280;
+        margin-bottom: 8px;
+      }
+      .y-field-group-derived .y-field-subhead {
+        color: #047857;
+      }
+      .y-field-checks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+      }
+      .y-field-checks label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 500;
+        margin: 0;
+        cursor: pointer;
+        font-size: 0.8125rem;
+      }
+      .y-field-checks input {
+        margin: 0;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
     <div class="wrap">
       <h1>Historical data — transform &amp; chart</h1>
       <p class="sub">
-        Paste a JSON array of objects. In transforms, map each field name to a
-        function that receives that field’s value (numbers only; string fields
-        are skipped for charting). Use <code>Math</code> and any in-scope
-        expression. Click <strong>Draw charts</strong> when ready.
+        Paste a JSON array. <strong>Pre-transforms</strong> run first on raw
+        rows: each entry is <code>(item, row) => …</code> with the
+        <em>original</em> row as <code>row</code>, and results replace those
+        keys on a copy that becomes the working dataset.
+        <strong>Chart transforms</strong> run on that row for plotting only.
+        <strong>Derived fields</strong> add new keys: each function is
+        <code>(row) => …</code> and receives the working row (after
+        pre-transforms); results are written in key order so later entries can
+        use earlier derived columns. String fields are skipped for charting.
+        Leave pre-transforms blank (or use <code>{}</code>) to skip that stage.
+        Pick the <strong>X-axis</strong> field (or row index) and which
+        <strong>Y</strong> fields to plot — <strong>Original</strong> lists
+        data/pre columns; <strong>Derived</strong> lists only names you define
+        in Derived fields (blur that box to refresh the lists). Click
+        <strong>Draw charts</strong> when ready.
       </p>
       <div class="err" id="err" aria-live="polite"></div>
       <div class="panels">
         <div>
-          <label for="data">Data (JSON array)</label>
-          <textarea id="data" spellcheck="false"></textarea>
+          <label for="data">Step 1: Data (JSON array)</label>
+          <textarea
+            id="data"
+            spellcheck="false"
+            placeholder='[
+  {
+    "date": "2024-01-02",
+    "open": 12,
+    "high": 12.4,
+    "low": 11.9,
+    "close": 12.1,
+    "volume": 500000
+  },
+  {
+    "date": "2024-01-03",
+    "open": 12.1,
+    "high": 12.8,
+    "low": 12.0,
+    "close": 12.5,
+    "volume": 620000
+  }
+]'
+          ></textarea>
         </div>
         <div>
-          <label for="transforms">Transforms (JavaScript object)</label>
-          <textarea id="transforms" spellcheck="false"></textarea>
+          <label for="preTransforms"
+            >Step 2: Pre-transforms — raw row (JavaScript object)</label
+          >
+          <textarea
+            id="preTransforms"
+            spellcheck="false"
+            placeholder='{
+  "volume": (item, row) => Math.log((item ?? 0) + 1),
+  "close": (item, row) => item
+}'
+          ></textarea>
+        </div>
+        <section
+          class="panel-span-2 section-derived"
+          aria-label="Derived fields"
+        >
+          <label for="derivedFields"
+            >Step 3: Derived fields — <code>(row) => …</code> adds columns
+            (JavaScript object)</label
+          >
+          <textarea
+            id="derivedFields"
+            spellcheck="false"
+            placeholder='{
+  "hl_range": (row) => row["high"] - row["low"],
+  "body_pct": (row) =>
+    row["close"] == null || row["open"] == null
+      ? null
+      : (row["close"] - row["open"]) / row["open"]
+}'
+          ></textarea>
+        </section>
+        <div class="panel-span-2">
+          <label for="transforms"
+            >Step 4: Chart transforms — working row (JavaScript object)</label
+          >
+          <textarea
+            id="transforms"
+            spellcheck="false"
+            placeholder='{
+  "open": (item, row) => item,
+  "high": (item, row) => item,
+  "close": (item, row) => item,
+  "volume": (item, row) => item / 1e6,
+  "hl_range": (item, row) => item
+}'
+          ></textarea>
+        </div>
+      </div>
+      <label for="xField">Step 5: Axis setting</label>
+      <div class="chart-options" id="chartOptions">
+        <div class="opt-block">
+          <label for="xField">X-axis field</label>
+          <select id="xField" aria-describedby="xFieldHint"></select>
+          <span class="opt-hint" id="xFieldHint"
+            >Uses working row values (after pre-transforms and derived
+            fields).</span
+          >
+        </div>
+        <div class="opt-block" style="flex: 1; min-width: 220px">
+          <label id="yFieldsLabel">Y-axis fields (numeric)</label>
+          <div
+            id="yFields"
+            class="y-field-groups"
+            role="group"
+            aria-labelledby="yFieldsLabel"
+          >
+            <div class="y-field-group">
+              <div class="y-field-subhead" id="yFieldsOriginalHead">
+                Original (data / pre-transforms)
+              </div>
+              <div class="y-field-checks" id="yFieldsOriginal"></div>
+            </div>
+            <div class="y-field-group y-field-group-derived">
+              <div class="y-field-subhead" id="yFieldsDerivedHead">Derived</div>
+              <div class="y-field-checks" id="yFieldsDerived"></div>
+            </div>
+          </div>
+          <span class="opt-hint"
+            >Uncheck fields to skip charting. New columns default to on. Leaving
+            the derived fields box updates Y lists on blur.</span
+          >
         </div>
       </div>
       <div class="actions">
@@ -163,16 +371,281 @@
     </div>
     <script>
       const LS_DATA = "historical-data-charts.v1.data";
+      const LS_PRE_TRANSFORMS = "historical-data-charts.v1.preTransforms";
+      const LS_DERIVED_FIELDS = "historical-data-charts.v1.derivedFields";
       const LS_TRANSFORMS = "historical-data-charts.v1.transforms";
+      const LS_X_FIELD = "historical-data-charts.v1.xField";
+      const LS_Y_FIELDS = "historical-data-charts.v1.yFields";
 
       /** @type {Map<string, Chart>} */
       const chartInstances = new Map();
 
+      /** @type {Set<string>} */
+      let lastChartableKeys = new Set();
+
+      let syncChartControlsTimer = 0;
+
+      function debounceSyncChartControls() {
+        if (syncChartControlsTimer) clearTimeout(syncChartControlsTimer);
+        syncChartControlsTimer = setTimeout(() => {
+          syncChartControlsTimer = 0;
+          syncChartControls();
+        }, 280);
+      }
+
+      function tryParsePreMapLenient() {
+        try {
+          const m = parseTransforms(
+            document.getElementById("preTransforms").value,
+          );
+          validateTransformFns(m, "Pre-transforms");
+          return m;
+        } catch {
+          return {};
+        }
+      }
+
+      function tryParseDerivedLenient() {
+        try {
+          const m = parseTransforms(
+            document.getElementById("derivedFields").value,
+          );
+          validateTransformFns(m, "Derived fields");
+          return m;
+        } catch {
+          return {};
+        }
+      }
+
+      /** Pre-transform rows only (for “original” Y-axis keys). */
+      function getPreOnlyWorkingRowsForFieldUi() {
+        const dataEl = document.getElementById("data");
+        if (!dataEl.value.trim()) return null;
+        let raw;
+        try {
+          raw = JSON.parse(dataEl.value);
+        } catch {
+          return null;
+        }
+        if (!Array.isArray(raw)) return null;
+        try {
+          return applyPreTransforms(raw, tryParsePreMapLenient());
+        } catch {
+          return null;
+        }
+      }
+
+      /** Working rows for field lists (raw → pre → derived when parses). */
+      function getWorkingRowsForFieldUi() {
+        const dataEl = document.getElementById("data");
+        if (!dataEl.value.trim()) return null;
+        let raw;
+        try {
+          raw = JSON.parse(dataEl.value);
+        } catch {
+          return null;
+        }
+        if (!Array.isArray(raw)) return null;
+        try {
+          let rows = applyPreTransforms(raw, tryParsePreMapLenient());
+          rows = applyDerivedFields(rows, tryParseDerivedLenient());
+          return rows;
+        } catch {
+          return null;
+        }
+      }
+
+      /** `unset`: no saved prefs (default all on). `list`: saved array (may be empty). */
+      function loadSavedYSelection() {
+        try {
+          const s = sessionStorage.getItem(LS_Y_FIELDS);
+          if (s === null) return { kind: "unset" };
+          const arr = JSON.parse(s);
+          if (!Array.isArray(arr)) return { kind: "unset" };
+          return { kind: "list", keys: new Set(arr) };
+        } catch {
+          return { kind: "unset" };
+        }
+      }
+
+      function persistChartFieldUi() {
+        try {
+          const xf = document.getElementById("xField");
+          if (xf && xf.value) sessionStorage.setItem(LS_X_FIELD, xf.value);
+          sessionStorage.setItem(
+            LS_Y_FIELDS,
+            JSON.stringify(getSelectedYFieldKeysFromUi()),
+          );
+        } catch (_) {
+          /* ignore */
+        }
+      }
+
+      function getSelectedYFieldKeysFromUi() {
+        const root = document.getElementById("yFields");
+        if (!root) return [];
+        return [...root.querySelectorAll("input[type=checkbox]:checked")].map(
+          (c) => c.value,
+        );
+      }
+
+      function appendYAxisCheckboxes(
+        container,
+        keys,
+        idPrefix,
+        savedY,
+        prevY,
+        isNewKey,
+      ) {
+        container.innerHTML = "";
+        for (const k of keys) {
+          const id = `${idPrefix}${k.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+          const lab = document.createElement("label");
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.value = k;
+          cb.id = id;
+          const newK = isNewKey(k);
+          let checked;
+          if (savedY.kind === "unset") {
+            checked = prevY.size === 0 || prevY.has(k) || newK;
+          } else {
+            checked = savedY.keys.has(k) || newK;
+          }
+          cb.checked = checked;
+          lab.appendChild(cb);
+          lab.appendChild(document.createTextNode(k));
+          container.appendChild(lab);
+        }
+      }
+
+      function syncChartControls() {
+        const xSelect = document.getElementById("xField");
+        const yOrig = document.getElementById("yFieldsOriginal");
+        const yDeriv = document.getElementById("yFieldsDerived");
+        const fullRows = getWorkingRowsForFieldUi();
+        const preRows = getPreOnlyWorkingRowsForFieldUi();
+        if (!xSelect || !yOrig || !yDeriv) return;
+        if (!fullRows || !preRows) {
+          xSelect.innerHTML = "";
+          yOrig.innerHTML = "";
+          yDeriv.innerHTML = "";
+          lastChartableKeys = new Set();
+          return;
+        }
+
+        const derivedMap = tryParseDerivedLenient();
+        const derivedKeyNames = new Set(Object.keys(derivedMap));
+
+        const baseChartable = [...collectKeys(preRows)]
+          .filter((k) => !isStringField(preRows, k))
+          .filter((k) => !derivedKeyNames.has(k))
+          .sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: "base" }),
+          );
+
+        const derivedChartable = Object.keys(derivedMap)
+          .filter((k) => !isStringField(fullRows, k))
+          .sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: "base" }),
+          );
+
+        const chartable = [...new Set([...baseChartable, ...derivedChartable])];
+
+        const prevY = new Set(getSelectedYFieldKeysFromUi());
+        const allKeys = [...collectKeys(fullRows)].sort((a, b) =>
+          a.localeCompare(b, undefined, { sensitivity: "base" }),
+        );
+
+        const prevX = xSelect.value;
+        xSelect.innerHTML = "";
+        const optIdx = document.createElement("option");
+        optIdx.value = "__index__";
+        optIdx.textContent = "(row index)";
+        xSelect.appendChild(optIdx);
+        for (const k of allKeys) {
+          const o = document.createElement("option");
+          o.value = k;
+          o.textContent = k;
+          xSelect.appendChild(o);
+        }
+
+        let xRestore = sessionStorage.getItem(LS_X_FIELD);
+        if (
+          xRestore &&
+          [...xSelect.options].some((o) => o.value === xRestore)
+        ) {
+          xSelect.value = xRestore;
+        } else if (
+          prevX &&
+          [...xSelect.options].some((o) => o.value === prevX)
+        ) {
+          xSelect.value = prevX;
+        } else if (allKeys.includes("date")) {
+          xSelect.value = "date";
+        } else {
+          xSelect.value = "__index__";
+        }
+
+        const savedY = loadSavedYSelection();
+        const isNewKey = (field) =>
+          lastChartableKeys.size > 0 && !lastChartableKeys.has(field);
+
+        appendYAxisCheckboxes(
+          yOrig,
+          baseChartable,
+          "y-orig-",
+          savedY,
+          prevY,
+          isNewKey,
+        );
+        if (derivedChartable.length === 0) {
+          yDeriv.innerHTML =
+            '<span class="opt-hint" style="display:inline-block;padding:2px 0">No derived numeric fields — add keys in Derived fields above</span>';
+        } else {
+          appendYAxisCheckboxes(
+            yDeriv,
+            derivedChartable,
+            "y-deriv-",
+            savedY,
+            prevY,
+            isNewKey,
+          );
+        }
+
+        lastChartableKeys = new Set(chartable);
+      }
+
+      function buildLabelsForX(rows, xKey) {
+        return rows.map((row, i) => {
+          if (xKey === "__index__") return String(i);
+          if (!row || typeof row !== "object" || Array.isArray(row)) {
+            return String(i);
+          }
+          if (!Object.prototype.hasOwnProperty.call(row, xKey)) return "";
+          const v = row[xKey];
+          if (v == null) return "";
+          if (typeof v === "object") {
+            try {
+              return JSON.stringify(v);
+            } catch {
+              return String(i);
+            }
+          }
+          return String(v);
+        });
+      }
+
       function loadFromStorage() {
         try {
           const d = sessionStorage.getItem(LS_DATA);
+          const p = sessionStorage.getItem(LS_PRE_TRANSFORMS);
           const t = sessionStorage.getItem(LS_TRANSFORMS);
           if (d !== null) document.getElementById("data").value = d;
+          if (p !== null) document.getElementById("preTransforms").value = p;
+          const der = sessionStorage.getItem(LS_DERIVED_FIELDS);
+          if (der !== null)
+            document.getElementById("derivedFields").value = der;
           if (t !== null) document.getElementById("transforms").value = t;
         } catch (_) {
           /* storage unavailable */
@@ -186,9 +659,18 @@
             document.getElementById("data").value,
           );
           sessionStorage.setItem(
+            LS_PRE_TRANSFORMS,
+            document.getElementById("preTransforms").value,
+          );
+          sessionStorage.setItem(
+            LS_DERIVED_FIELDS,
+            document.getElementById("derivedFields").value,
+          );
+          sessionStorage.setItem(
             LS_TRANSFORMS,
             document.getElementById("transforms").value,
           );
+          persistChartFieldUi();
         } catch (_) {
           /* quota or private mode */
         }
@@ -208,6 +690,41 @@
           }
         }
         return keys;
+      }
+
+      function fillTransformTextareaFromDataIfEmpty(textareaId) {
+        const el = document.getElementById(textareaId);
+        if (el.value.trim() !== "") return;
+        const dataEl = document.getElementById("data");
+        if (!dataEl.value.trim()) return;
+        let rows;
+        try {
+          rows = JSON.parse(dataEl.value);
+        } catch {
+          return;
+        }
+        if (!Array.isArray(rows)) return;
+        const keys = [...collectKeys(rows)].sort((a, b) =>
+          a.localeCompare(b, undefined, { sensitivity: "base" }),
+        );
+        if (keys.length === 0) return;
+        const body = keys
+          .map((k) => `  ${JSON.stringify(k)}: (item, row) => item`)
+          .join(",\n");
+        el.value = `{\n${body}\n}`;
+      }
+
+      function fillPreTransformsFromDataIfEmpty() {
+        fillTransformTextareaFromDataIfEmpty("preTransforms");
+      }
+
+      function fillTransformsFromDataIfEmpty() {
+        fillTransformTextareaFromDataIfEmpty("transforms");
+      }
+
+      function fillAllTransformTextareasFromDataIfEmpty() {
+        fillPreTransformsFromDataIfEmpty();
+        fillTransformsFromDataIfEmpty();
       }
 
       function isStringField(rows, key) {
@@ -231,21 +748,126 @@
         return obj;
       }
 
+      function validateTransformFns(obj, label) {
+        for (const key of Object.keys(obj)) {
+          const v = obj[key];
+          if (typeof v !== "function") {
+            throw new Error(
+              `${label}: "${key}" must be a function (or remove the key).`,
+            );
+          }
+        }
+      }
+
+      /** Apply field-wise pre-transforms; `row` in each fn is always the original raw row. */
+      function applyPreTransforms(rows, preMap) {
+        const out = [];
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || typeof row !== "object" || Array.isArray(row)) {
+            out.push(row);
+            continue;
+          }
+          const next = { ...row };
+          for (const key of Object.keys(preMap)) {
+            const fn = preMap[key];
+            const item = next[key];
+            try {
+              next[key] = fn(item, row);
+            } catch (e) {
+              throw new Error(
+                `Pre-transform "${key}" at index ${i}: ${e && e.message}`,
+              );
+            }
+          }
+          out.push(next);
+        }
+        return out;
+      }
+
+      /**
+       * Add computed columns. Each fn is `(row) => value`; `row` is the working
+       * row updated in object key order (later keys see earlier derived fields).
+       */
+      function applyDerivedFields(rows, derivedMap) {
+        const keys = Object.keys(derivedMap);
+        if (keys.length === 0) return rows;
+        const out = [];
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || typeof row !== "object" || Array.isArray(row)) {
+            out.push(row);
+            continue;
+          }
+          let next = { ...row };
+          for (const key of keys) {
+            const fn = derivedMap[key];
+            try {
+              next[key] = fn(next);
+            } catch (e) {
+              throw new Error(
+                `Derived field "${key}" at index ${i}: ${e && e.message}`,
+              );
+            }
+          }
+          out.push(next);
+        }
+        return out;
+      }
+
       function draw() {
+        fillAllTransformTextareasFromDataIfEmpty();
         showErr("");
         for (const ch of chartInstances.values()) ch.destroy();
         chartInstances.clear();
         document.getElementById("charts").innerHTML = "";
 
-        let rows;
+        let rawRows;
         try {
-          rows = JSON.parse(document.getElementById("data").value);
+          rawRows = JSON.parse(document.getElementById("data").value);
         } catch (e) {
           showErr("Data JSON parse error:\n" + (e && e.message));
           return;
         }
-        if (!Array.isArray(rows)) {
+        if (!Array.isArray(rawRows)) {
           showErr("Data must be a JSON array.");
+          return;
+        }
+
+        let preMap;
+        try {
+          preMap = parseTransforms(
+            document.getElementById("preTransforms").value,
+          );
+          validateTransformFns(preMap, "Pre-transforms");
+        } catch (e) {
+          showErr("Pre-transforms error:\n" + (e && e.message));
+          return;
+        }
+
+        let rows;
+        try {
+          rows = applyPreTransforms(rawRows, preMap);
+        } catch (e) {
+          showErr("Pre-transforms error:\n" + (e && e.message));
+          return;
+        }
+
+        let derivedMap;
+        try {
+          derivedMap = parseTransforms(
+            document.getElementById("derivedFields").value,
+          );
+          validateTransformFns(derivedMap, "Derived fields");
+        } catch (e) {
+          showErr("Derived fields error:\n" + (e && e.message));
+          return;
+        }
+
+        try {
+          rows = applyDerivedFields(rows, derivedMap);
+        } catch (e) {
+          showErr("Derived fields error:\n" + (e && e.message));
           return;
         }
 
@@ -255,18 +877,33 @@
             document.getElementById("transforms").value,
           );
         } catch (e) {
-          showErr("Transforms error:\n" + (e && e.message));
+          showErr("Chart transforms error:\n" + (e && e.message));
           return;
         }
 
-        persistToStorage();
+        syncChartControls();
 
-        const keys = [...collectKeys(rows)].filter(
-          (k) => !isStringField(rows, k),
+        const chartableSet = new Set(
+          [...collectKeys(rows)].filter((k) => !isStringField(rows, k)),
         );
-        const labels = rows.map((row, i) =>
-          row && typeof row.date === "string" ? row.date : String(i),
+        let keysToPlot = getSelectedYFieldKeysFromUi().filter((k) =>
+          chartableSet.has(k),
         );
+        if (keysToPlot.length === 0) {
+          persistToStorage();
+          showErr(
+            "Select at least one Y-axis numeric field to plot (checkboxes above).",
+          );
+          return;
+        }
+        keysToPlot.sort((a, b) =>
+          a.localeCompare(b, undefined, { sensitivity: "base" }),
+        );
+
+        const xKey = document.getElementById("xField").value;
+        const labels = buildLabelsForX(rows, xKey);
+
+        persistToStorage();
 
         const chartRoot = document.getElementById("charts");
         const palette = [
@@ -280,7 +917,7 @@
           "#2563eb",
         ];
 
-        for (const key of keys.sort()) {
+        for (const key of keysToPlot) {
           const identity = (v) => v;
           const fn = transforms[key];
           const mapper =
@@ -309,9 +946,11 @@
               series.push(null);
               continue;
             }
+            const record =
+              row && typeof row === "object" && !Array.isArray(row) ? row : {};
             let y;
             try {
-              y = mapper(raw);
+              y = mapper(raw, record);
             } catch (e) {
               showErr(
                 `Transform error for field "${key}" at index ${i}:\n${e && e.message}`,
@@ -386,12 +1025,34 @@
         }
 
         if (chartInstances.size === 0) {
-          showErr("No numeric fields to chart after skipping string fields.");
+          showErr(
+            "No charts produced (check Y-axis selections and chart transforms).",
+          );
         }
       }
 
+      function onDataInput() {
+        fillAllTransformTextareasFromDataIfEmpty();
+        debounceSyncChartControls();
+      }
+
       document.getElementById("draw").addEventListener("click", draw);
+      document.getElementById("data").addEventListener("input", onDataInput);
+      document
+        .getElementById("preTransforms")
+        .addEventListener("input", debounceSyncChartControls);
+      document
+        .getElementById("derivedFields")
+        .addEventListener("input", debounceSyncChartControls);
+      document
+        .getElementById("derivedFields")
+        .addEventListener("blur", syncChartControls);
+      document
+        .getElementById("chartOptions")
+        .addEventListener("change", persistChartFieldUi);
       loadFromStorage();
+      fillAllTransformTextareasFromDataIfEmpty();
+      syncChartControls();
     </script>
   </body>
 </html>
