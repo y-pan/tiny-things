@@ -24,10 +24,32 @@
         width: 100%;
         margin: 0 auto;
       }
-      h1 {
-        margin-bottom: 8px;
-        color: #111827;
+      .page-title-row {
+        margin-bottom: 12px;
+      }
+      .page-title-row > label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.85rem;
+        margin-bottom: 6px;
+        color: #374151;
+      }
+      .page-title-input {
+        width: 100%;
+        max-width: 42rem;
         font-size: 1.35rem;
+        font-weight: 600;
+        color: #111827;
+        padding: 8px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #fff;
+        font-family: inherit;
+      }
+      .page-title-input:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
       }
       .sub {
         color: #6b7280;
@@ -234,7 +256,16 @@
   </head>
   <body>
     <div class="wrap">
-      <h1>Historical data — transform &amp; chart</h1>
+      <div class="page-title-row">
+        <label for="pageTitle">Title</label>
+        <input
+          type="text"
+          id="pageTitle"
+          class="page-title-input"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
       <p class="sub">
         Paste a JSON array. <strong>Pre-transforms</strong> run first on raw
         rows: each entry is <code>(item, row) => …</code> with the
@@ -370,6 +401,8 @@
       <div id="charts"></div>
     </div>
     <script>
+      const DEFAULT_PAGE_TITLE = "Historical data — transform & chart";
+      const LS_PAGE_TITLE = "historical-data-charts.v1.pageTitle";
       const LS_DATA = "historical-data-charts.v1.data";
       const LS_PRE_TRANSFORMS = "historical-data-charts.v1.preTransforms";
       const LS_DERIVED_FIELDS = "historical-data-charts.v1.derivedFields";
@@ -636,8 +669,31 @@
         });
       }
 
+      function syncDocumentTitleFromInput() {
+        const el = document.getElementById("pageTitle");
+        if (!el) return;
+        const v = el.value.trim();
+        document.title = v || DEFAULT_PAGE_TITLE;
+      }
+
+      function persistPageTitle() {
+        try {
+          const el = document.getElementById("pageTitle");
+          if (el) sessionStorage.setItem(LS_PAGE_TITLE, el.value);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+
       function loadFromStorage() {
         try {
+          const titleEl = document.getElementById("pageTitle");
+          if (titleEl) {
+            const savedTitle = sessionStorage.getItem(LS_PAGE_TITLE);
+            if (savedTitle !== null) titleEl.value = savedTitle;
+            else titleEl.value = DEFAULT_PAGE_TITLE;
+            syncDocumentTitleFromInput();
+          }
           const d = sessionStorage.getItem(LS_DATA);
           const p = sessionStorage.getItem(LS_PRE_TRANSFORMS);
           const t = sessionStorage.getItem(LS_TRANSFORMS);
@@ -654,6 +710,7 @@
 
       function persistToStorage() {
         try {
+          persistPageTitle();
           sessionStorage.setItem(
             LS_DATA,
             document.getElementById("data").value,
@@ -1050,6 +1107,15 @@
       document
         .getElementById("chartOptions")
         .addEventListener("change", persistChartFieldUi);
+      const pageTitleEl = document.getElementById("pageTitle");
+      pageTitleEl.addEventListener("input", () => {
+        syncDocumentTitleFromInput();
+        persistPageTitle();
+      });
+      pageTitleEl.addEventListener("blur", () => {
+        syncDocumentTitleFromInput();
+        persistPageTitle();
+      });
       loadFromStorage();
       fillAllTransformTextareasFromDataIfEmpty();
       syncChartControls();
