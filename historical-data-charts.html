@@ -134,6 +134,62 @@
         flex-wrap: wrap;
         margin-bottom: 20px;
       }
+      .x-zoom-panel {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 16px;
+        max-width: 52rem;
+      }
+      .x-zoom-panel > strong {
+        display: block;
+        font-size: 0.9rem;
+        margin-bottom: 6px;
+        color: #111827;
+      }
+      .x-zoom-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 14px 20px;
+        margin-top: 8px;
+      }
+      .x-zoom-controls label {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #374151;
+        margin: 0;
+      }
+      .x-zoom-controls input[type="number"] {
+        width: 6.5rem;
+        padding: 6px 8px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        font-size: 0.85rem;
+      }
+      .x-zoom-controls input[type="number"]:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .x-zoom-panel .x-zoom-hint {
+        display: block;
+        margin-top: 8px;
+        font-size: 0.8rem;
+        color: #6b7280;
+      }
+      .x-zoom-panel button.secondary {
+        background: #f3f4f6;
+        color: #374151;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+      }
+      .x-zoom-panel button.secondary:hover {
+        background: #e5e7eb;
+      }
       button {
         background: #4f46e5;
         color: #fff;
@@ -169,6 +225,32 @@
         display: grid;
         grid-template-columns: 1fr;
         gap: 20px;
+      }
+      #charts.pin-first-chart > .chart-card:first-child {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        align-self: start;
+        background: #fff;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      }
+      .chart-pin-row {
+        margin-bottom: 14px;
+      }
+      .chart-pin-row .chart-pin-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        cursor: pointer;
+        margin: 0;
+      }
+      .chart-pin-row input[type="checkbox"] {
+        width: 1rem;
+        height: 1rem;
+        accent-color: #6366f1;
       }
       .chart-card {
         background: #fff;
@@ -227,6 +309,22 @@
         width: 100%;
         height: min(320px, 42vw);
         min-height: 220px;
+      }
+      .chart-x-scrubber {
+        margin-top: 6px;
+        padding-top: 8px;
+        border-top: 1px solid #f3f4f6;
+      }
+      .chart-x-scrubber-track {
+        box-sizing: border-box;
+        width: 100%;
+        margin-left: 0;
+      }
+      .chart-x-scrubber input[type="range"].chart-x-scrubber-range {
+        display: block;
+        width: 100%;
+        margin: 0;
+        accent-color: #6366f1;
       }
       .chart-options {
         background: #fff;
@@ -473,6 +571,48 @@
       <div class="actions">
         <button type="button" id="draw">Draw charts</button>
       </div>
+      <div class="x-zoom-panel">
+        <strong>X axis zoom</strong>
+        <span class="opt-hint"
+          >Set inclusive <strong>start</strong> and <strong>end</strong> indices (0-based) to zoom
+          the X axis. Leave both empty for the full range. Omit one end to use 0 or the last
+          index.</span
+        >
+        <div class="x-zoom-controls">
+          <label>
+            Start index
+            <input
+              type="number"
+              id="xWindowStart"
+              min="0"
+              step="1"
+              placeholder="0"
+              aria-describedby="xZoomHint"
+            />
+          </label>
+          <label>
+            End index
+            <input
+              type="number"
+              id="xWindowEnd"
+              min="0"
+              step="1"
+              placeholder="last"
+              aria-describedby="xZoomHint"
+            />
+          </label>
+          <button type="button" class="secondary" id="xZoomReset">
+            Reset zoom
+          </button>
+        </div>
+        <span class="x-zoom-hint" id="xZoomHint" role="status"></span>
+      </div>
+      <div class="chart-pin-row">
+        <label class="chart-pin-label">
+          <input type="checkbox" id="pinFirstChart" />
+          Pin top chart while scrolling
+        </label>
+      </div>
       <div id="charts"></div>
     </div>
     <script>
@@ -485,12 +625,381 @@
       const LS_X_FIELD = "historical-data-charts.v1.xField";
       const LS_Y_FIELDS = "historical-data-charts.v1.yFields";
       const LS_CHART_ORDER = "historical-data-charts.v1.chartOrder";
+      const LS_X_WINDOW_START = "historical-data-charts.v1.xWindowStart";
+      const LS_X_WINDOW_END = "historical-data-charts.v1.xWindowEnd";
+      const LS_PIN_FIRST_CHART = "historical-data-charts.v1.pinFirstChart";
 
       /** @type {Map<string, Chart>} */
       const chartInstances = new Map();
 
+      /** @type {string[]} */
+      let scrubberLabels = [];
+      /** @type {number} */
+      let scrubberIndex = 0;
+
       /** @type {Set<string>} */
       let lastChartableKeys = new Set();
+
+      function scrubberXPixel(chart, index) {
+        const xScale = chart.scales.x;
+        const labels = chart.data.labels;
+        if (!xScale || !labels || index < 0 || index >= labels.length) {
+          return null;
+        }
+        const meta = chart.getDatasetMeta(0);
+        const pt = meta?.data?.[index];
+        if (pt && typeof pt.x === "number" && !Number.isNaN(pt.x)) {
+          return pt.x;
+        }
+        const v = labels[index];
+        try {
+          const px = xScale.getPixelForValue(v);
+          if (typeof px === "number" && !Number.isNaN(px)) return px;
+        } catch {
+          /* fall through */
+        }
+        if (typeof xScale.getPixelForTick === "function") {
+          return xScale.getPixelForTick(index);
+        }
+        return null;
+      }
+
+      function scrubberYPixel(chart, index) {
+        const meta = chart.getDatasetMeta(0);
+        const pt = meta?.data?.[index];
+        if (
+          pt &&
+          typeof pt.y === "number" &&
+          !Number.isNaN(pt.y) &&
+          !pt.skip
+        ) {
+          return pt.y;
+        }
+        return null;
+      }
+
+      function scrubberRawYValue(chart, index) {
+        const ds = chart.data.datasets[0];
+        const d = ds?.data;
+        if (!d || index < 0 || index >= d.length) return null;
+        return d[index];
+      }
+
+      function formatScrubberYValue(v) {
+        if (v == null || typeof v !== "number" || !Number.isFinite(v)) {
+          return "—";
+        }
+        if (Number.isInteger(v) && Math.abs(v) < 1e15) {
+          return String(v);
+        }
+        return new Intl.NumberFormat(undefined, {
+          maximumSignificantDigits: 8,
+          maximumFractionDigits: 8,
+        }).format(v);
+      }
+
+      function truncateCanvasTextToWidth(ctx, text, maxWidth) {
+        if (!text || ctx.measureText(text).width <= maxWidth) return text;
+        const ellipsis = "…";
+        let low = 0;
+        let high = text.length;
+        while (low < high) {
+          const mid = Math.ceil((low + high) / 2);
+          const s = text.slice(0, mid) + ellipsis;
+          if (ctx.measureText(s).width <= maxWidth) low = mid;
+          else high = mid - 1;
+        }
+        return text.slice(0, low) + ellipsis;
+      }
+
+      /** X/Y tooltip on the vertical scrubber line, high inside the plot (no extra layout padding). */
+      function drawScrubberXYOnIndicatorLine(
+        ctx,
+        chartArea,
+        x,
+        index,
+        xLabelText,
+        yValueText,
+        accentColor,
+      ) {
+        const padX = 8;
+        const padY = 6;
+        const topOffset = 4;
+        const font =
+          '600 11px/1.25 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.save();
+        ctx.font = font;
+        const areaW = chartArea.right - chartArea.left - 4;
+        const innerMax = Math.min(320, areaW) - padX * 2;
+        const full = `#${index} · X: ${String(xLabelText ?? "")} · Y: ${yValueText}`;
+        const line = truncateCanvasTextToWidth(ctx, full, innerMax);
+        const textW = ctx.measureText(line).width;
+        const boxW = Math.min(
+          Math.max(textW + padX * 2, 52),
+          areaW,
+        );
+        const boxH = padY * 2 + 13;
+        let left = x - boxW / 2;
+        left = Math.max(
+          chartArea.left + 2,
+          Math.min(left, chartArea.right - boxW - 2),
+        );
+        const top = chartArea.top + topOffset;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+        ctx.strokeStyle = accentColor;
+        ctx.lineWidth = 1;
+        if (typeof ctx.roundRect === "function") {
+          ctx.beginPath();
+          ctx.roundRect(left, top, boxW, boxH, 6);
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          ctx.fillRect(left, top, boxW, boxH);
+          ctx.strokeRect(left, top, boxW, boxH);
+        }
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.fillStyle = "#374151";
+        ctx.fillText(line, left + padX, top + padY);
+        ctx.restore();
+      }
+
+      function syncScrubberTrackToChart(chart) {
+        const ca = chart.chartArea;
+        const canvas = chart.canvas;
+        if (!ca || !canvas || ca.width <= 0) return;
+        const cssScale =
+          canvas.clientWidth > 0 ? canvas.clientWidth / canvas.width : 1;
+        const leftCss = ca.left * cssScale;
+        const widthCss = ca.width * cssScale;
+        const card = canvas.closest(".chart-card");
+        if (!card) return;
+        const track = card.querySelector(".chart-x-scrubber-track");
+        if (!track) return;
+        track.style.marginLeft = `${leftCss}px`;
+        track.style.width = `${widthCss}px`;
+      }
+
+      const xAxisScrubberPlugin = {
+        id: "xAxisScrubber",
+        afterRender(chart) {
+          syncScrubberTrackToChart(chart);
+        },
+        afterDatasetsDraw(chart) {
+          if (!scrubberLabels.length) return;
+          const idx = scrubberIndex;
+          if (idx < 0 || idx >= scrubberLabels.length) return;
+          const x = scrubberXPixel(chart, idx);
+          if (x == null) return;
+          const { ctx, chartArea } = chart;
+          const ds = chart.data.datasets[0];
+          const lineColor = ds.borderColor || "#6366f1";
+          const rawY = scrubberRawYValue(chart, idx);
+          const yText = formatScrubberYValue(rawY);
+          const xText =
+            scrubberLabels[idx] != null ? String(scrubberLabels[idx]) : "";
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(x, chartArea.top);
+          ctx.lineTo(x, chartArea.bottom);
+          ctx.strokeStyle = "rgba(99, 102, 241, 0.85)";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 3]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          drawScrubberXYOnIndicatorLine(
+            ctx,
+            chartArea,
+            x,
+            idx,
+            xText,
+            yText,
+            lineColor,
+          );
+          const y = scrubberYPixel(chart, idx);
+          if (y != null) {
+            ctx.beginPath();
+            ctx.arc(x, y, 7, 0, Math.PI * 2);
+            ctx.fillStyle = lineColor;
+            ctx.fill();
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+          ctx.restore();
+        },
+      };
+      Chart.register(xAxisScrubberPlugin);
+
+      /** Range bounds for the scrubber slider (match zoomed X scale or full series). */
+      function getScrubberRangeBounds(n) {
+        const win = computeXAxisMinMax(n);
+        if (win.min !== undefined && win.max !== undefined) {
+          return { min: win.min, max: win.max };
+        }
+        return { min: 0, max: Math.max(0, n - 1) };
+      }
+
+      function syncScrubberUi() {
+        const n = scrubberLabels.length;
+        const { min: rMin, max: rMax } = getScrubberRangeBounds(n);
+        if (n > 0) {
+          scrubberIndex = Math.min(Math.max(scrubberIndex, rMin), rMax);
+        }
+        const label =
+          n > 0 && scrubberIndex >= 0 && scrubberIndex < n
+            ? scrubberLabels[scrubberIndex]
+            : "";
+        document.querySelectorAll(".chart-x-scrubber-range").forEach((el) => {
+          el.min = String(rMin);
+          el.max = String(rMax);
+          el.value = String(scrubberIndex);
+          el.setAttribute("aria-valuetext", label);
+        });
+      }
+
+      function syncAllChartsScrubberOverlay() {
+        for (const ch of chartInstances.values()) {
+          ch.update("none");
+        }
+      }
+
+      function setScrubberIndexFromUi(i) {
+        const n = scrubberLabels.length;
+        if (!n) return;
+        const { min: rMin, max: rMax } = getScrubberRangeBounds(n);
+        scrubberIndex = Math.max(
+          rMin,
+          Math.min(rMax, Math.round(Number(i))),
+        );
+        syncScrubberUi();
+        syncAllChartsScrubberOverlay();
+      }
+
+      /**
+       * Category X min/max (inclusive indices). Both fields empty = full range.
+       * One field empty: start defaults to 0, end to n-1.
+       */
+      function computeXAxisMinMax(n) {
+        if (n <= 1) return {};
+        const startEl = document.getElementById("xWindowStart");
+        const endEl = document.getElementById("xWindowEnd");
+        const rs = startEl ? String(startEl.value).trim() : "";
+        const re = endEl ? String(endEl.value).trim() : "";
+        if (rs === "" && re === "") return {};
+        let s;
+        let e;
+        if (rs === "") {
+          s = 0;
+        } else {
+          s = parseInt(rs, 10);
+          if (!Number.isFinite(s)) return {};
+          s = Math.floor(s);
+        }
+        if (re === "") {
+          e = n - 1;
+        } else {
+          e = parseInt(re, 10);
+          if (!Number.isFinite(e)) return {};
+          e = Math.floor(e);
+        }
+        s = Math.max(0, Math.min(n - 1, s));
+        e = Math.max(0, Math.min(n - 1, e));
+        if (s > e) {
+          const t = s;
+          s = e;
+          e = t;
+          if (startEl) startEl.value = String(s);
+          if (endEl) endEl.value = String(e);
+        }
+        if (s === 0 && e === n - 1) return {};
+        return { min: s, max: e };
+      }
+
+      function updateXZoomUiHintsFromWin(n, win) {
+        const startEl = document.getElementById("xWindowStart");
+        const endEl = document.getElementById("xWindowEnd");
+        const lim = n > 1 ? String(n - 1) : undefined;
+        if (startEl) {
+          startEl.disabled = n <= 1;
+          if (lim !== undefined) startEl.max = lim;
+          else startEl.removeAttribute("max");
+        }
+        if (endEl) {
+          endEl.disabled = n <= 1;
+          if (lim !== undefined) endEl.max = lim;
+          else endEl.removeAttribute("max");
+        }
+        const hint = document.getElementById("xZoomHint");
+        if (!hint) return;
+        if (win.min === undefined || win.max === undefined) {
+          hint.textContent = n ? `Showing all ${n} X categories (indices 0–${n - 1}).` : "";
+        } else {
+          hint.textContent = `Zoomed: X indices ${win.min}–${win.max} inclusive (${win.max - win.min + 1} of ${n}).`;
+        }
+      }
+
+      function persistXZoomUi() {
+        try {
+          const s = document.getElementById("xWindowStart");
+          const e = document.getElementById("xWindowEnd");
+          if (s) sessionStorage.setItem(LS_X_WINDOW_START, s.value);
+          if (e) sessionStorage.setItem(LS_X_WINDOW_END, e.value);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+
+      function applyPinFirstChart() {
+        const el = document.getElementById("pinFirstChart");
+        const charts = document.getElementById("charts");
+        if (!charts) return;
+        charts.classList.toggle("pin-first-chart", Boolean(el && el.checked));
+      }
+
+      function persistPinFirstChart() {
+        try {
+          const el = document.getElementById("pinFirstChart");
+          if (el)
+            sessionStorage.setItem(LS_PIN_FIRST_CHART, el.checked ? "1" : "0");
+        } catch (_) {
+          /* ignore */
+        }
+      }
+
+      function applyXZoomToChartsLive() {
+        const n = scrubberLabels.length;
+        const win = computeXAxisMinMax(n);
+        updateXZoomUiHintsFromWin(n, win);
+        if (!n || chartInstances.size === 0) {
+          persistXZoomUi();
+          return;
+        }
+        if (win.min !== undefined && win.max !== undefined) {
+          scrubberIndex = Math.min(
+            Math.max(scrubberIndex, win.min),
+            win.max,
+          );
+        }
+        for (const ch of chartInstances.values()) {
+          if (win.min !== undefined && win.max !== undefined) {
+            ch.options.scales.x.min = win.min;
+            ch.options.scales.x.max = win.max;
+          } else {
+            delete ch.options.scales.x.min;
+            delete ch.options.scales.x.max;
+          }
+          ch.update("none");
+        }
+        syncScrubberUi();
+        syncAllChartsScrubberOverlay();
+        requestAnimationFrame(() => {
+          for (const ch of chartInstances.values()) {
+            syncScrubberTrackToChart(ch);
+          }
+        });
+        persistXZoomUi();
+      }
 
       let syncChartControlsTimer = 0;
 
@@ -779,6 +1288,16 @@
           if (der !== null)
             document.getElementById("derivedFields").value = der;
           if (t !== null) document.getElementById("transforms").value = t;
+          const xs = sessionStorage.getItem(LS_X_WINDOW_START);
+          const xe = sessionStorage.getItem(LS_X_WINDOW_END);
+          const xws = document.getElementById("xWindowStart");
+          const xwe = document.getElementById("xWindowEnd");
+          if (xws && xs !== null) xws.value = xs;
+          if (xwe && xe !== null) xwe.value = xe;
+          const pinSaved = sessionStorage.getItem(LS_PIN_FIRST_CHART);
+          const pinEl = document.getElementById("pinFirstChart");
+          if (pinEl && pinSaved !== null) pinEl.checked = pinSaved === "1";
+          applyPinFirstChart();
         } catch (_) {
           /* storage unavailable */
         }
@@ -805,6 +1324,8 @@
           );
           persistChartFieldUi();
           persistChartOrder();
+          persistXZoomUi();
+          persistPinFirstChart();
         } catch (_) {
           /* quota or private mode */
         }
@@ -1142,6 +1663,20 @@
 
         const xKey = document.getElementById("xField").value;
         const labels = buildLabelsForX(rows, xKey);
+        scrubberLabels = labels;
+        scrubberIndex = Math.min(
+          Math.max(0, scrubberIndex),
+          Math.max(0, labels.length - 1),
+        );
+
+        const xAxisWin = computeXAxisMinMax(labels.length);
+        updateXZoomUiHintsFromWin(labels.length, xAxisWin);
+        if (xAxisWin.min !== undefined && xAxisWin.max !== undefined) {
+          scrubberIndex = Math.min(
+            Math.max(scrubberIndex, xAxisWin.min),
+            xAxisWin.max,
+          );
+        }
 
         persistToStorage();
 
@@ -1231,6 +1766,35 @@
           wrap.appendChild(canvas);
           card.appendChild(head);
           card.appendChild(wrap);
+          const scrubberRow = document.createElement("div");
+          scrubberRow.className = "chart-x-scrubber";
+          const scrubTrack = document.createElement("div");
+          scrubTrack.className = "chart-x-scrubber-track";
+          const scrubRange = document.createElement("input");
+          scrubRange.type = "range";
+          scrubRange.className = "chart-x-scrubber-range";
+          const rLo =
+            typeof xAxisWin.min === "number" ? xAxisWin.min : 0;
+          const rHi =
+            typeof xAxisWin.max === "number"
+              ? xAxisWin.max
+              : Math.max(0, labels.length - 1);
+          scrubRange.min = String(rLo);
+          scrubRange.max = String(rHi);
+          scrubRange.value = String(scrubberIndex);
+          scrubRange.setAttribute(
+            "aria-label",
+            "X position along chart axis (synced across all charts)",
+          );
+          if (labels.length > 0) {
+            scrubRange.setAttribute(
+              "aria-valuetext",
+              labels[scrubberIndex] ?? "",
+            );
+          }
+          scrubTrack.appendChild(scrubRange);
+          scrubberRow.appendChild(scrubTrack);
+          card.appendChild(scrubberRow);
           chartRoot.appendChild(card);
 
           const color = palette[chartInstances.size % palette.length];
@@ -1260,6 +1824,11 @@
               },
               scales: {
                 x: {
+                  type: "category",
+                  ...(typeof xAxisWin.min === "number" &&
+                  typeof xAxisWin.max === "number"
+                    ? { min: xAxisWin.min, max: xAxisWin.max }
+                    : {}),
                   ticks: {
                     maxRotation: 45,
                     minRotation: 0,
@@ -1282,6 +1851,12 @@
             "No charts produced (check Y-axis selections and chart transforms).",
           );
         } else {
+          syncScrubberUi();
+          requestAnimationFrame(() => {
+            for (const ch of chartInstances.values()) {
+              syncScrubberTrackToChart(ch);
+            }
+          });
           persistChartOrder();
         }
       }
@@ -1292,6 +1867,11 @@
       }
 
       const chartsEl = document.getElementById("charts");
+      chartsEl.addEventListener("input", (e) => {
+        const r = e.target.closest(".chart-x-scrubber-range");
+        if (!r || !chartsEl.contains(r)) return;
+        setScrubberIndexFromUi(r.value);
+      });
       chartsEl.addEventListener("dragstart", (e) => {
         const handle = e.target.closest(".chart-drag-handle");
         if (!handle) return;
@@ -1325,6 +1905,23 @@
       });
       chartsEl.addEventListener("drop", (e) => {
         e.preventDefault();
+      });
+
+      document.getElementById("xWindowStart").addEventListener("input", () => {
+        applyXZoomToChartsLive();
+      });
+      document.getElementById("xWindowEnd").addEventListener("input", () => {
+        applyXZoomToChartsLive();
+      });
+      document.getElementById("xZoomReset").addEventListener("click", () => {
+        document.getElementById("xWindowStart").value = "";
+        document.getElementById("xWindowEnd").value = "";
+        applyXZoomToChartsLive();
+      });
+
+      document.getElementById("pinFirstChart").addEventListener("change", () => {
+        applyPinFirstChart();
+        persistPinFirstChart();
       });
 
       document.getElementById("draw").addEventListener("click", draw);
