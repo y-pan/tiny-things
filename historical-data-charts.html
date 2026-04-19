@@ -82,6 +82,33 @@
         margin-bottom: 6px;
         color: #374151;
       }
+      .field-with-action {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 12px;
+        margin-bottom: 6px;
+      }
+      .field-with-action label {
+        margin-bottom: 0;
+      }
+      button.btn-inline {
+        background: #fff;
+        color: #374151;
+        border: 1px solid #e5e7eb;
+        padding: 6px 12px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      button.btn-inline:hover {
+        background: #f9fafb;
+      }
+      button.btn-inline:active {
+        transform: translateY(1px);
+      }
       textarea {
         width: 100%;
         min-height: 220px;
@@ -151,11 +178,49 @@
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
         width: 100%;
       }
+      .chart-card-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .chart-drag-handle {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        background: #f9fafb;
+        color: #6b7280;
+        font-size: 14px;
+        line-height: 1;
+        cursor: grab;
+        user-select: none;
+        touch-action: none;
+      }
+      .chart-drag-handle:hover {
+        background: #f3f4f6;
+        color: #374151;
+      }
+      .chart-drag-handle:active {
+        cursor: grabbing;
+      }
+      .chart-card--dragging {
+        opacity: 0.65;
+      }
+      .chart-card--dragging .chart-drag-handle {
+        cursor: grabbing;
+      }
       .chart-card h2 {
         font-size: 0.95rem;
         font-weight: 600;
-        margin-bottom: 8px;
+        margin: 0;
         color: #111827;
+        flex: 1;
+        min-width: 0;
       }
       .chart-canvas-wrap {
         position: relative;
@@ -311,9 +376,19 @@
           ></textarea>
         </div>
         <div>
-          <label for="preTransforms"
-            >Step 2: Pre-transforms — raw row (JavaScript object)</label
-          >
+          <div class="field-with-action">
+            <label for="preTransforms"
+              >Step 2: Pre-transforms — raw row (JavaScript object)</label
+            >
+            <button
+              type="button"
+              class="btn-inline"
+              id="regeneratePreTransforms"
+              title="Rebuild pre-transforms from Step 1 data (identity per column)"
+            >
+              Regenerate from data
+            </button>
+          </div>
           <textarea
             id="preTransforms"
             spellcheck="false"
@@ -409,6 +484,7 @@
       const LS_TRANSFORMS = "historical-data-charts.v1.transforms";
       const LS_X_FIELD = "historical-data-charts.v1.xField";
       const LS_Y_FIELDS = "historical-data-charts.v1.yFields";
+      const LS_CHART_ORDER = "historical-data-charts.v1.chartOrder";
 
       /** @type {Map<string, Chart>} */
       const chartInstances = new Map();
@@ -728,9 +804,80 @@
             document.getElementById("transforms").value,
           );
           persistChartFieldUi();
+          persistChartOrder();
         } catch (_) {
           /* quota or private mode */
         }
+      }
+
+      function loadChartOrder() {
+        try {
+          const s = sessionStorage.getItem(LS_CHART_ORDER);
+          if (!s) return null;
+          const arr = JSON.parse(s);
+          return Array.isArray(arr) ? arr : null;
+        } catch {
+          return null;
+        }
+      }
+
+      /** Merge saved order with current keys; unknown keys append sorted. */
+      function applyChartOrderPreference(keys, savedOrder) {
+        const list = [...keys];
+        if (!savedOrder || savedOrder.length === 0) {
+          return list.sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: "base" }),
+          );
+        }
+        const set = new Set(list);
+        const out = [];
+        const seen = new Set();
+        for (const k of savedOrder) {
+          if (set.has(k) && !seen.has(k)) {
+            out.push(k);
+            seen.add(k);
+          }
+        }
+        const rest = list.filter((k) => !seen.has(k));
+        rest.sort((a, b) =>
+          a.localeCompare(b, undefined, { sensitivity: "base" }),
+        );
+        return [...out, ...rest];
+      }
+
+      function persistChartOrder() {
+        try {
+          const root = document.getElementById("charts");
+          if (!root) return;
+          const cards = root.querySelectorAll(".chart-card[data-chart-key]");
+          if (cards.length === 0) return;
+          const order = [...cards].map((c) =>
+            c.getAttribute("data-chart-key"),
+          );
+          sessionStorage.setItem(LS_CHART_ORDER, JSON.stringify(order));
+        } catch (_) {
+          /* ignore */
+        }
+      }
+
+      /** @type {HTMLElement | null} */
+      let chartDragCard = null;
+
+      function getDragAfterChartCard(container, y) {
+        const cards = [
+          ...container.querySelectorAll(
+            ".chart-card:not(.chart-card--dragging)",
+          ),
+        ];
+        let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+        for (const child of cards) {
+          const box = child.getBoundingClientRect();
+          const offset = y - box.top - box.height / 2;
+          if (offset < 0 && offset > closest.offset) {
+            closest = { offset, element: child };
+          }
+        }
+        return closest.element;
       }
 
       function showErr(msg) {
@@ -782,6 +929,41 @@
       function fillAllTransformTextareasFromDataIfEmpty() {
         fillPreTransformsFromDataIfEmpty();
         fillTransformsFromDataIfEmpty();
+      }
+
+      /** Overwrite pre-transforms with one identity mapping per key from Step 1 data. */
+      function regeneratePreTransformsFromData() {
+        showErr("");
+        const dataEl = document.getElementById("data");
+        const preEl = document.getElementById("preTransforms");
+        if (!dataEl.value.trim()) {
+          showErr("Add JSON data in Step 1 first.");
+          return;
+        }
+        let rows;
+        try {
+          rows = JSON.parse(dataEl.value);
+        } catch (e) {
+          showErr("Data JSON parse error:\n" + (e && e.message));
+          return;
+        }
+        if (!Array.isArray(rows)) {
+          showErr("Data must be a JSON array.");
+          return;
+        }
+        const keys = [...collectKeys(rows)].sort((a, b) =>
+          a.localeCompare(b, undefined, { sensitivity: "base" }),
+        );
+        if (keys.length === 0) {
+          showErr("No object keys found in the data array.");
+          return;
+        }
+        const body = keys
+          .map((k) => `  ${JSON.stringify(k)}: (item, row) => item`)
+          .join(",\n");
+        preEl.value = `{\n${body}\n}`;
+        persistToStorage();
+        syncChartControls();
       }
 
       function isStringField(rows, key) {
@@ -953,8 +1135,9 @@
           );
           return;
         }
-        keysToPlot.sort((a, b) =>
-          a.localeCompare(b, undefined, { sensitivity: "base" }),
+        keysToPlot = applyChartOrderPreference(
+          keysToPlot,
+          loadChartOrder(),
         );
 
         const xKey = document.getElementById("xField").value;
@@ -1027,13 +1210,26 @@
 
           const card = document.createElement("div");
           card.className = "chart-card";
+          card.setAttribute("data-chart-key", key);
+          const head = document.createElement("div");
+          head.className = "chart-card-head";
+          const dragHandle = document.createElement("span");
+          dragHandle.className = "chart-drag-handle";
+          dragHandle.setAttribute("draggable", "true");
+          dragHandle.setAttribute("role", "button");
+          dragHandle.setAttribute("tabindex", "0");
+          dragHandle.setAttribute("aria-label", "Drag to reorder chart");
+          dragHandle.textContent = "⋮⋮";
           const title = document.createElement("h2");
           title.textContent = key;
+          head.appendChild(dragHandle);
+          head.appendChild(title);
           const wrap = document.createElement("div");
           wrap.className = "chart-canvas-wrap";
           const canvas = document.createElement("canvas");
+          canvas.setAttribute("draggable", "false");
           wrap.appendChild(canvas);
-          card.appendChild(title);
+          card.appendChild(head);
           card.appendChild(wrap);
           chartRoot.appendChild(card);
 
@@ -1085,6 +1281,8 @@
           showErr(
             "No charts produced (check Y-axis selections and chart transforms).",
           );
+        } else {
+          persistChartOrder();
         }
       }
 
@@ -1093,7 +1291,46 @@
         debounceSyncChartControls();
       }
 
+      const chartsEl = document.getElementById("charts");
+      chartsEl.addEventListener("dragstart", (e) => {
+        const handle = e.target.closest(".chart-drag-handle");
+        if (!handle) return;
+        const card = handle.closest(".chart-card");
+        if (!card || !chartsEl.contains(card)) return;
+        chartDragCard = card;
+        card.classList.add("chart-card--dragging");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData(
+          "text/plain",
+          card.getAttribute("data-chart-key") || "",
+        );
+      });
+      chartsEl.addEventListener("dragend", () => {
+        if (chartDragCard) {
+          chartDragCard.classList.remove("chart-card--dragging");
+          chartDragCard = null;
+        }
+        persistChartOrder();
+      });
+      chartsEl.addEventListener("dragover", (e) => {
+        if (!chartDragCard) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        const after = getDragAfterChartCard(chartsEl, e.clientY);
+        if (after == null) {
+          chartsEl.appendChild(chartDragCard);
+        } else {
+          chartsEl.insertBefore(chartDragCard, after);
+        }
+      });
+      chartsEl.addEventListener("drop", (e) => {
+        e.preventDefault();
+      });
+
       document.getElementById("draw").addEventListener("click", draw);
+      document
+        .getElementById("regeneratePreTransforms")
+        .addEventListener("click", regeneratePreTransformsFromData);
       document.getElementById("data").addEventListener("input", onDataInput);
       document
         .getElementById("preTransforms")
