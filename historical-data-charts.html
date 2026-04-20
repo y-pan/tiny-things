@@ -252,6 +252,37 @@
         height: 1rem;
         accent-color: #6366f1;
       }
+      .session-backup-panel {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-top: 20px;
+        max-width: 52rem;
+      }
+      .session-backup-panel > strong {
+        display: block;
+        font-size: 0.9rem;
+        margin-bottom: 6px;
+        color: #111827;
+      }
+      .session-backup-panel .session-backup-actions {
+        margin: 10px 0 12px;
+      }
+      .session-backup-panel textarea.session-backup-textarea {
+        width: 100%;
+        min-height: 140px;
+        margin-top: 6px;
+        margin-bottom: 12px;
+        font-size: 11px;
+        line-height: 1.4;
+      }
+      .session-backup-panel textarea#sessionImportIn {
+        background: #fff;
+      }
+      .session-backup-panel textarea#sessionExportOut {
+        background: #f9fafb;
+      }
       .chart-card {
         background: #fff;
         border-radius: 12px;
@@ -570,13 +601,21 @@
       </div>
       <div class="actions">
         <button type="button" id="draw">Draw charts</button>
+        <button
+          type="button"
+          class="btn-inline"
+          id="cloneTab"
+          title="Open a new tab with the same stored data"
+        >
+          Clone tab
+        </button>
       </div>
       <div class="x-zoom-panel">
         <strong>X axis zoom</strong>
         <span class="opt-hint"
-          >Set inclusive <strong>start</strong> and <strong>end</strong> indices (0-based) to zoom
-          the X axis. Leave both empty for the full range. Omit one end to use 0 or the last
-          index.</span
+          >Set inclusive <strong>start</strong> and <strong>end</strong> indices
+          (0-based) to zoom the X axis. Leave both empty for the full range.
+          Omit one end to use 0 or the last index.</span
         >
         <div class="x-zoom-controls">
           <label>
@@ -614,6 +653,39 @@
         </label>
       </div>
       <div id="charts"></div>
+      <div class="session-backup-panel">
+        <strong>Session backup</strong>
+        <span class="opt-hint"
+          >Export produces a Node.js script with a <code>SESSION</code> object.
+          It is not saved automatically. Paste the full script into the box
+          below and click <strong>Init</strong> to restore fields from
+          <code>sessionStorage</code>.</span
+        >
+        <div class="session-backup-actions">
+          <button type="button" class="btn-inline" id="sessionExportBtn">
+            Export to script
+          </button>
+        </div>
+        <label for="sessionExportOut">Exported script</label>
+        <textarea
+          id="sessionExportOut"
+          readonly
+          class="session-backup-textarea"
+          spellcheck="false"
+          aria-label="Exported Node.js session script"
+        ></textarea>
+        <label for="sessionImportIn">Paste script, then Init</label>
+        <textarea
+          id="sessionImportIn"
+          class="session-backup-textarea"
+          spellcheck="false"
+          placeholder="Paste full exported script…"
+          aria-label="Paste exported script for Init"
+        ></textarea>
+        <button type="button" class="btn-inline" id="sessionInitBtn">
+          Init
+        </button>
+      </div>
     </div>
     <script>
       const DEFAULT_PAGE_TITLE = "Historical data — transform & chart";
@@ -628,6 +700,9 @@
       const LS_X_WINDOW_START = "historical-data-charts.v1.xWindowStart";
       const LS_X_WINDOW_END = "historical-data-charts.v1.xWindowEnd";
       const LS_PIN_FIRST_CHART = "historical-data-charts.v1.pinFirstChart";
+      const SESSION_EXPORT_PREFIX = "historical-data-charts.";
+      /** One-shot bridge in localStorage so a new tab can copy sessionStorage (not shared across tabs). */
+      const CLONE_TAB_BRIDGE_KEY = "historical-data-charts.v1.cloneTabBridge";
 
       /** @type {Map<string, Chart>} */
       const chartInstances = new Map();
@@ -667,12 +742,7 @@
       function scrubberYPixel(chart, index) {
         const meta = chart.getDatasetMeta(0);
         const pt = meta?.data?.[index];
-        if (
-          pt &&
-          typeof pt.y === "number" &&
-          !Number.isNaN(pt.y) &&
-          !pt.skip
-        ) {
+        if (pt && typeof pt.y === "number" && !Number.isNaN(pt.y) && !pt.skip) {
           return pt.y;
         }
         return null;
@@ -734,10 +804,7 @@
         const full = `#${index} · X: ${String(xLabelText ?? "")} · Y: ${yValueText}`;
         const line = truncateCanvasTextToWidth(ctx, full, innerMax);
         const textW = ctx.measureText(line).width;
-        const boxW = Math.min(
-          Math.max(textW + padX * 2, 52),
-          areaW,
-        );
+        const boxW = Math.min(Math.max(textW + padX * 2, 52), areaW);
         const boxH = padY * 2 + 13;
         let left = x - boxW / 2;
         left = Math.max(
@@ -868,10 +935,7 @@
         const n = scrubberLabels.length;
         if (!n) return;
         const { min: rMin, max: rMax } = getScrubberRangeBounds(n);
-        scrubberIndex = Math.max(
-          rMin,
-          Math.min(rMax, Math.round(Number(i))),
-        );
+        scrubberIndex = Math.max(rMin, Math.min(rMax, Math.round(Number(i))));
         syncScrubberUi();
         syncAllChartsScrubberOverlay();
       }
@@ -933,7 +997,9 @@
         const hint = document.getElementById("xZoomHint");
         if (!hint) return;
         if (win.min === undefined || win.max === undefined) {
-          hint.textContent = n ? `Showing all ${n} X categories (indices 0–${n - 1}).` : "";
+          hint.textContent = n
+            ? `Showing all ${n} X categories (indices 0–${n - 1}).`
+            : "";
         } else {
           hint.textContent = `Zoomed: X indices ${win.min}–${win.max} inclusive (${win.max - win.min + 1} of ${n}).`;
         }
@@ -976,10 +1042,7 @@
           return;
         }
         if (win.min !== undefined && win.max !== undefined) {
-          scrubberIndex = Math.min(
-            Math.max(scrubberIndex, win.min),
-            win.max,
-          );
+          scrubberIndex = Math.min(Math.max(scrubberIndex, win.min), win.max);
         }
         for (const ch of chartInstances.values()) {
           if (win.min !== undefined && win.max !== undefined) {
@@ -1270,6 +1333,137 @@
         }
       }
 
+      function collectHistoricalSessionSnapshot() {
+        const out = {};
+        try {
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const k = sessionStorage.key(i);
+            if (k && k.startsWith("historical-data-charts.")) {
+              out[k] = sessionStorage.getItem(k);
+            }
+          }
+        } catch (_) {
+          /* ignore */
+        }
+        return out;
+      }
+
+      function applyHistoricalSessionSnapshot(obj) {
+        if (!obj || typeof obj !== "object") return;
+        for (const [k, v] of Object.entries(obj)) {
+          if (
+            typeof k === "string" &&
+            k.startsWith("historical-data-charts.") &&
+            typeof v === "string"
+          ) {
+            sessionStorage.setItem(k, v);
+          }
+        }
+      }
+
+      /** New tab opens with ?clone=1; bridge payload is read from localStorage then cleared. */
+      function hydrateCloneTabFromBridge() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("clone") !== "1") return;
+        try {
+          const raw = localStorage.getItem(CLONE_TAB_BRIDGE_KEY);
+          if (raw) {
+            applyHistoricalSessionSnapshot(JSON.parse(raw));
+          }
+        } catch (_) {
+          /* ignore */
+        } finally {
+          try {
+            localStorage.removeItem(CLONE_TAB_BRIDGE_KEY);
+          } catch (_) {}
+        }
+        params.delete("clone");
+        const qs = params.toString();
+        const clean = `${location.pathname}${qs ? "?" + qs : ""}${location.hash}`;
+        history.replaceState({}, "", clean);
+      }
+
+      function extractJsonObjectStringAt(text, startBraceIndex) {
+        const t = text;
+        let i = startBraceIndex;
+        if (t[i] !== "{") throw new Error("Expected {");
+        let depth = 0;
+        let inString = false;
+        let escape = false;
+        for (; i < t.length; i++) {
+          const c = t[i];
+          if (inString) {
+            if (escape) {
+              escape = false;
+            } else if (c === "\\") {
+              escape = true;
+            } else if (c === '"') {
+              inString = false;
+            }
+          } else {
+            if (c === '"') {
+              inString = true;
+            } else if (c === "{") {
+              depth++;
+            } else if (c === "}") {
+              depth--;
+              if (depth === 0) {
+                return t.slice(startBraceIndex, i + 1);
+              }
+            }
+          }
+        }
+        throw new Error("Unclosed object in SESSION");
+      }
+
+      function parseSessionFromExportedScript(text) {
+        const marker = "const SESSION = ";
+        const mi = text.indexOf(marker);
+        if (mi === -1) {
+          throw new Error(
+            "Missing `const SESSION =` (paste the full exported script).",
+          );
+        }
+        const brace = text.indexOf("{", mi);
+        if (brace === -1) throw new Error("Missing SESSION object");
+        const jsonStr = extractJsonObjectStringAt(text, brace);
+        return JSON.parse(jsonStr);
+      }
+
+      function buildSessionExportNodeScript(obj) {
+        const jsonOneLine = JSON.stringify(obj);
+        return `#!/usr/bin/env node
+'use strict';
+/**
+ * sessionStorage snapshot for historical-data-charts.html
+ * Browser: paste this entire file into "Paste script, then Init" and click Init.
+ * Node: module.exports is the SESSION object.
+ */
+const SESSION = ${jsonOneLine};
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = SESSION;
+}
+`;
+      }
+
+      function applySessionImportForHistorical(sessionObj) {
+        let n = 0;
+        for (const [k, v] of Object.entries(sessionObj)) {
+          if (
+            typeof k === "string" &&
+            k.startsWith(SESSION_EXPORT_PREFIX) &&
+            typeof v === "string"
+          ) {
+            sessionStorage.setItem(k, v);
+            n++;
+          }
+        }
+        if (n === 0) {
+          throw new Error("No historical-data-charts.* keys found in SESSION.");
+        }
+      }
+
       function loadFromStorage() {
         try {
           const titleEl = document.getElementById("pageTitle");
@@ -1372,9 +1566,7 @@
           if (!root) return;
           const cards = root.querySelectorAll(".chart-card[data-chart-key]");
           if (cards.length === 0) return;
-          const order = [...cards].map((c) =>
-            c.getAttribute("data-chart-key"),
-          );
+          const order = [...cards].map((c) => c.getAttribute("data-chart-key"));
           sessionStorage.setItem(LS_CHART_ORDER, JSON.stringify(order));
         } catch (_) {
           /* ignore */
@@ -1656,10 +1848,7 @@
           );
           return;
         }
-        keysToPlot = applyChartOrderPreference(
-          keysToPlot,
-          loadChartOrder(),
-        );
+        keysToPlot = applyChartOrderPreference(keysToPlot, loadChartOrder());
 
         const xKey = document.getElementById("xField").value;
         const labels = buildLabelsForX(rows, xKey);
@@ -1773,8 +1962,7 @@
           const scrubRange = document.createElement("input");
           scrubRange.type = "range";
           scrubRange.className = "chart-x-scrubber-range";
-          const rLo =
-            typeof xAxisWin.min === "number" ? xAxisWin.min : 0;
+          const rLo = typeof xAxisWin.min === "number" ? xAxisWin.min : 0;
           const rHi =
             typeof xAxisWin.max === "number"
               ? xAxisWin.max
@@ -1919,10 +2107,68 @@
         applyXZoomToChartsLive();
       });
 
-      document.getElementById("pinFirstChart").addEventListener("change", () => {
-        applyPinFirstChart();
-        persistPinFirstChart();
+      document
+        .getElementById("pinFirstChart")
+        .addEventListener("change", () => {
+          applyPinFirstChart();
+          persistPinFirstChart();
+        });
+
+      document.getElementById("cloneTab").addEventListener("click", () => {
+        try {
+          persistToStorage();
+          const snap = collectHistoricalSessionSnapshot();
+          localStorage.setItem(CLONE_TAB_BRIDGE_KEY, JSON.stringify(snap));
+        } catch (e) {
+          showErr(
+            "Could not clone tab:\n" + (e && e.message ? e.message : String(e)),
+          );
+          return;
+        }
+        const u = new URL(window.location.href);
+        u.searchParams.set("clone", "1");
+        window.open(u.toString(), "_blank", "noopener,noreferrer");
       });
+
+      document
+        .getElementById("sessionExportBtn")
+        .addEventListener("click", () => {
+          showErr("");
+          try {
+            persistToStorage();
+            const obj = collectHistoricalSessionSnapshot();
+            document.getElementById("sessionExportOut").value =
+              buildSessionExportNodeScript(obj);
+          } catch (e) {
+            showErr(
+              "Export failed:\n" + (e && e.message ? e.message : String(e)),
+            );
+          }
+        });
+
+      document
+        .getElementById("sessionInitBtn")
+        .addEventListener("click", () => {
+          showErr("");
+          try {
+            const text = document
+              .getElementById("sessionImportIn")
+              .value.trim();
+            if (!text) {
+              showErr("Paste the exported script first.");
+              return;
+            }
+            const session = parseSessionFromExportedScript(text);
+            applySessionImportForHistorical(session);
+            loadFromStorage();
+            fillAllTransformTextareasFromDataIfEmpty();
+            syncChartControls();
+          } catch (e) {
+            showErr(
+              "Init failed:\n" + (e && e.message ? e.message : String(e)),
+            );
+          }
+        });
 
       document.getElementById("draw").addEventListener("click", draw);
       document
@@ -1950,6 +2196,7 @@
         syncDocumentTitleFromInput();
         persistPageTitle();
       });
+      hydrateCloneTabFromBridge();
       loadFromStorage();
       fillAllTransformTextareasFromDataIfEmpty();
       syncChartControls();

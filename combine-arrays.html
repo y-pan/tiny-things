@@ -138,6 +138,18 @@
         border-color: #6366f1;
         box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
       }
+      .array-name-row {
+        margin-bottom: 8px;
+      }
+      .array-name-row label {
+        font-size: 0.8rem;
+        margin-bottom: 4px;
+        color: #4b5563;
+      }
+      .array-name-input {
+        padding: 8px 10px;
+        font-size: 0.875rem;
+      }
       .actions {
         display: flex;
         gap: 12px;
@@ -169,6 +181,22 @@
       button:active {
         transform: translateY(1px);
       }
+      button.btn-inline {
+        background: #fff;
+        color: #374151;
+        border: 1px solid #e5e7eb;
+        padding: 6px 12px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      button.btn-inline:hover {
+        background: #f9fafb;
+      }
+      button.btn-inline:active {
+        transform: translateY(1px);
+      }
       .err {
         background: #fef2f2;
         color: #991b1b;
@@ -190,6 +218,37 @@
         font-weight: 400;
         margin-top: 6px;
         line-height: 1.4;
+      }
+      .session-backup-panel {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-top: 20px;
+        max-width: 52rem;
+      }
+      .session-backup-panel > strong {
+        display: block;
+        font-size: 0.9rem;
+        margin-bottom: 6px;
+        color: #111827;
+      }
+      .session-backup-panel .session-backup-actions {
+        margin: 10px 0 12px;
+      }
+      .session-backup-panel textarea.session-backup-textarea {
+        width: 100%;
+        min-height: 140px;
+        margin-top: 6px;
+        margin-bottom: 12px;
+        font-size: 11px;
+        line-height: 1.4;
+      }
+      .session-backup-panel textarea#sessionImportIn {
+        background: #fff;
+      }
+      .session-backup-panel textarea#sessionExportOut {
+        background: #f9fafb;
       }
     </style>
   </head>
@@ -223,6 +282,17 @@
       <div class="err" id="err" aria-live="polite"></div>
       <div class="panels">
         <div>
+          <div class="array-name-row">
+            <label for="arrayNameLeft">Name</label>
+            <input
+              type="text"
+              id="arrayNameLeft"
+              class="text-input array-name-input"
+              placeholder="Array A"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
           <label for="dataLeft">Array A (JSON array)</label>
           <textarea
             id="dataLeft"
@@ -234,6 +304,17 @@
           ></textarea>
         </div>
         <div>
+          <div class="array-name-row">
+            <label for="arrayNameRight">Name</label>
+            <input
+              type="text"
+              id="arrayNameRight"
+              class="text-input array-name-input"
+              placeholder="Array B"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
           <label for="dataRight">Array B (JSON array)</label>
           <textarea
             id="dataRight"
@@ -317,6 +398,14 @@
 
         <div class="actions">
           <button type="button" id="combine">Combine arrays</button>
+          <button
+            type="button"
+            id="cloneTab"
+            class="secondary"
+            title="Open a new tab with the same stored data"
+          >
+            Clone tab
+          </button>
           <button type="button" id="copyOut" class="secondary">
             Copy output
           </button>
@@ -333,6 +422,36 @@
           ></textarea>
         </div>
       </div>
+      <div class="session-backup-panel">
+        <strong>Session backup</strong>
+        <span class="opt-hint"
+          >Export produces a Node.js script with a <code>SESSION</code> object. It is
+          not saved automatically. Paste the full script into the box below and click
+          <strong>Init</strong> to restore fields from <code>sessionStorage</code>.</span
+        >
+        <div class="session-backup-actions">
+          <button type="button" class="btn-inline" id="sessionExportBtn">
+            Export to script
+          </button>
+        </div>
+        <label for="sessionExportOut">Exported script</label>
+        <textarea
+          id="sessionExportOut"
+          readonly
+          class="session-backup-textarea"
+          spellcheck="false"
+          aria-label="Exported Node.js session script"
+        ></textarea>
+        <label for="sessionImportIn">Paste script, then Init</label>
+        <textarea
+          id="sessionImportIn"
+          class="session-backup-textarea"
+          spellcheck="false"
+          placeholder="Paste full exported script…"
+          aria-label="Paste exported script for Init"
+        ></textarea>
+        <button type="button" class="btn-inline" id="sessionInitBtn">Init</button>
+      </div>
     </div>
     <script>
       const DEFAULT_PAGE_TITLE = "Combine arrays";
@@ -343,6 +462,11 @@
       const LS_JOIN_FIELD_RIGHT = "combine-arrays.v1.joinFieldRight";
       const LS_RENAME_LEFT = "combine-arrays.v1.renameLeft";
       const LS_RENAME_RIGHT = "combine-arrays.v1.renameRight";
+      const LS_ARRAY_NAME_LEFT = "combine-arrays.v1.arrayNameLeft";
+      const LS_ARRAY_NAME_RIGHT = "combine-arrays.v1.arrayNameRight";
+      const SESSION_EXPORT_PREFIX = "combine-arrays.";
+      /** One-shot bridge in localStorage so a new tab can copy sessionStorage. */
+      const CLONE_TAB_BRIDGE_KEY = "combine-arrays.v1.cloneTabBridge";
 
       function showErr(msg) {
         const el = document.getElementById("err");
@@ -391,7 +515,172 @@
             LS_RENAME_RIGHT,
             document.getElementById("renameRight").value,
           );
+          sessionStorage.setItem(
+            LS_ARRAY_NAME_LEFT,
+            document.getElementById("arrayNameLeft").value,
+          );
+          sessionStorage.setItem(
+            LS_ARRAY_NAME_RIGHT,
+            document.getElementById("arrayNameRight").value,
+          );
         } catch (_) {}
+      }
+
+      function getArrayDisplayName(side) {
+        const id = side === "left" ? "arrayNameLeft" : "arrayNameRight";
+        const el = document.getElementById(id);
+        const v = el && el.value.trim();
+        return v || (side === "left" ? "Array A" : "Array B");
+      }
+
+      /** Sync labels for data, join, and field-map sections to custom names. */
+      function syncArrayNameLabels() {
+        const left = getArrayDisplayName("left");
+        const right = getArrayDisplayName("right");
+        const jl = document.querySelector('label[for="joinFieldLeft"]');
+        const jr = document.querySelector('label[for="joinFieldRight"]');
+        if (jl) jl.textContent = left;
+        if (jr) jr.textContent = right;
+        const dl = document.querySelector('label[for="dataLeft"]');
+        const dr = document.querySelector('label[for="dataRight"]');
+        if (dl) dl.textContent = `${left} (JSON array)`;
+        if (dr) dr.textContent = `${right} (JSON array)`;
+        const rl = document.querySelector('label[for="renameLeft"]');
+        const rr = document.querySelector('label[for="renameRight"]');
+        if (rl) rl.textContent = `${left} — field map (JavaScript object)`;
+        if (rr) rr.textContent = `${right} — field map (JavaScript object)`;
+      }
+
+      function collectCombineSessionSnapshot() {
+        const out = {};
+        try {
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const k = sessionStorage.key(i);
+            if (k && k.startsWith("combine-arrays.")) {
+              out[k] = sessionStorage.getItem(k);
+            }
+          }
+        } catch (_) {
+          /* ignore */
+        }
+        return out;
+      }
+
+      function applyCombineSessionSnapshot(obj) {
+        if (!obj || typeof obj !== "object") return;
+        for (const [k, v] of Object.entries(obj)) {
+          if (
+            typeof k === "string" &&
+            k.startsWith("combine-arrays.") &&
+            typeof v === "string"
+          ) {
+            sessionStorage.setItem(k, v);
+          }
+        }
+      }
+
+      function hydrateCloneTabFromBridge() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("clone") !== "1") return;
+        try {
+          const raw = localStorage.getItem(CLONE_TAB_BRIDGE_KEY);
+          if (raw) {
+            applyCombineSessionSnapshot(JSON.parse(raw));
+          }
+        } catch (_) {
+          /* ignore */
+        } finally {
+          try {
+            localStorage.removeItem(CLONE_TAB_BRIDGE_KEY);
+          } catch (_) {
+            /* ignore */
+          }
+        }
+        params.delete("clone");
+        const qs = params.toString();
+        const clean = `${location.pathname}${qs ? "?" + qs : ""}${location.hash}`;
+        history.replaceState({}, "", clean);
+      }
+
+      function extractJsonObjectStringAt(text, startBraceIndex) {
+        const t = text;
+        let i = startBraceIndex;
+        if (t[i] !== "{") throw new Error("Expected {");
+        let depth = 0;
+        let inString = false;
+        let escape = false;
+        for (; i < t.length; i++) {
+          const c = t[i];
+          if (inString) {
+            if (escape) {
+              escape = false;
+            } else if (c === "\\") {
+              escape = true;
+            } else if (c === '"') {
+              inString = false;
+            }
+          } else {
+            if (c === '"') {
+              inString = true;
+            } else if (c === "{") {
+              depth++;
+            } else if (c === "}") {
+              depth--;
+              if (depth === 0) {
+                return t.slice(startBraceIndex, i + 1);
+              }
+            }
+          }
+        }
+        throw new Error("Unclosed object in SESSION");
+      }
+
+      function parseSessionFromExportedScript(text) {
+        const marker = "const SESSION = ";
+        const mi = text.indexOf(marker);
+        if (mi === -1) {
+          throw new Error(
+            "Missing `const SESSION =` (paste the full exported script).",
+          );
+        }
+        const brace = text.indexOf("{", mi);
+        if (brace === -1) throw new Error("Missing SESSION object");
+        const jsonStr = extractJsonObjectStringAt(text, brace);
+        return JSON.parse(jsonStr);
+      }
+
+      function buildSessionExportNodeScript(obj) {
+        const jsonOneLine = JSON.stringify(obj);
+        return `#!/usr/bin/env node
+'use strict';
+/**
+ * sessionStorage snapshot for combine-arrays.html
+ * Browser: paste this entire file into "Paste script, then Init" and click Init.
+ * Node: module.exports is the SESSION object.
+ */
+const SESSION = ${jsonOneLine};
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = SESSION;
+}
+`;
+      }
+
+      function applySessionImportForCombine(sessionObj) {
+        let n = 0;
+        for (const [k, v] of Object.entries(sessionObj)) {
+          if (
+            typeof k === "string" &&
+            k.startsWith(SESSION_EXPORT_PREFIX) &&
+            typeof v === "string"
+          ) {
+            sessionStorage.setItem(k, v);
+            n++;
+          }
+        }
+        if (n === 0) {
+          throw new Error("No combine-arrays.* keys found in SESSION.");
+        }
       }
 
       function loadFromStorage() {
@@ -411,6 +700,11 @@
           if (dr !== null) document.getElementById("dataRight").value = dr;
           if (rl !== null) document.getElementById("renameLeft").value = rl;
           if (rr !== null) document.getElementById("renameRight").value = rr;
+          const nl = sessionStorage.getItem(LS_ARRAY_NAME_LEFT);
+          const nr = sessionStorage.getItem(LS_ARRAY_NAME_RIGHT);
+          if (nl !== null) document.getElementById("arrayNameLeft").value = nl;
+          if (nr !== null) document.getElementById("arrayNameRight").value = nr;
+          syncArrayNameLabels();
         } catch (_) {}
       }
 
@@ -706,6 +1000,8 @@
 
       function combine() {
         showErr("");
+        const nameL = getArrayDisplayName("left");
+        const nameR = getArrayDisplayName("right");
         const resL = parseJsonArrayFromText(
           document.getElementById("dataLeft").value,
         );
@@ -714,7 +1010,7 @@
         );
         if (!resL.ok) {
           showErr(
-            "Array A: " +
+            `${nameL}: ` +
               (resL.reason === "empty"
                 ? "empty"
                 : resL.reason === "not-array"
@@ -725,7 +1021,7 @@
         }
         if (!resR.ok) {
           showErr(
-            "Array B: " +
+            `${nameR}: ` +
               (resR.reason === "empty"
                 ? "empty"
                 : resR.reason === "not-array"
@@ -741,7 +1037,7 @@
         const joinRight = document.getElementById("joinFieldRight").value;
         if (!joinLeft || !joinRight) {
           showErr(
-            "Select a join column for both Array A and Array B (blur data boxes to refresh options).",
+            `Select a join column for both ${nameL} and ${nameR} (blur data boxes to refresh options).`,
           );
           return;
         }
@@ -751,7 +1047,7 @@
         try {
           mapLeft = parseMap(
             document.getElementById("renameLeft").value,
-            "Array A map",
+            `${nameL} map`,
           );
         } catch (e) {
           showErr(e && e.message);
@@ -760,7 +1056,7 @@
         try {
           mapRight = parseMap(
             document.getElementById("renameRight").value,
-            "Array B map",
+            `${nameR} map`,
           );
         } catch (e) {
           showErr(e && e.message);
@@ -789,11 +1085,11 @@
           for (const lrow of ls) {
             for (const rrow of rs) {
               try {
-                const aPart = projectRow(lrow, mapLeft, "Array A map", li);
+                const aPart = projectRow(lrow, mapLeft, `${nameL} map`, li);
                 const bPart = projectRow(
                   rrow,
                   mapRight,
-                  "Array B map",
+                  `${nameR} map`,
                   out.length,
                 );
                 out.push({ ...aPart, ...bPart });
@@ -822,6 +1118,55 @@
       }
 
       document.getElementById("combine").addEventListener("click", combine);
+      document.getElementById("cloneTab").addEventListener("click", () => {
+        try {
+          persistAll();
+          const snap = collectCombineSessionSnapshot();
+          localStorage.setItem(CLONE_TAB_BRIDGE_KEY, JSON.stringify(snap));
+        } catch (e) {
+          showErr(
+            "Could not clone tab:\n" + (e && e.message ? e.message : String(e)),
+          );
+          return;
+        }
+        const u = new URL(window.location.href);
+        u.searchParams.set("clone", "1");
+        window.open(u.toString(), "_blank", "noopener,noreferrer");
+      });
+
+      document.getElementById("sessionExportBtn").addEventListener("click", () => {
+        showErr("");
+        try {
+          persistAll();
+          const obj = collectCombineSessionSnapshot();
+          document.getElementById("sessionExportOut").value =
+            buildSessionExportNodeScript(obj);
+        } catch (e) {
+          showErr(
+            "Export failed:\n" + (e && e.message ? e.message : String(e)),
+          );
+        }
+      });
+
+      document.getElementById("sessionInitBtn").addEventListener("click", () => {
+        showErr("");
+        try {
+          const text = document.getElementById("sessionImportIn").value.trim();
+          if (!text) {
+            showErr("Paste the exported script first.");
+            return;
+          }
+          const session = parseSessionFromExportedScript(text);
+          applySessionImportForCombine(session);
+          loadFromStorage();
+          syncJoinDropdowns();
+        } catch (e) {
+          showErr(
+            "Init failed:\n" + (e && e.message ? e.message : String(e)),
+          );
+        }
+      });
+
       document.getElementById("copyOut").addEventListener("click", copyOutput);
 
       const pageTitleEl = document.getElementById("pageTitle");
@@ -855,6 +1200,16 @@
         },
       );
 
+      ["arrayNameLeft", "arrayNameRight"].forEach((id) => {
+        const el = document.getElementById(id);
+        el.addEventListener("input", () => {
+          syncArrayNameLabels();
+          persistAll();
+        });
+        el.addEventListener("blur", persistAll);
+      });
+
+      hydrateCloneTabFromBridge();
       loadFromStorage();
       syncJoinDropdowns();
     </script>
