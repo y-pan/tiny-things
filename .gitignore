@@ -4,3 +4,5 @@ ignore/
 .DS_Store
 
 data/
+
+.vscode/
