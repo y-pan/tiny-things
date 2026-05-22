@@ -396,6 +396,9 @@
         <button type="button" id="btnCopyDiff" class="secondary" disabled>
           Copy diff text
         </button>
+        <button type="button" id="btnCopyAll" class="secondary">
+          Copy All
+        </button>
       </div>
 
       <div class="search-row">
@@ -951,6 +954,20 @@
         return lines.join("\n\n");
       }
 
+      function buildCopyAllText() {
+        const left = jsonLeft.value;
+        const right = jsonRight.value;
+        const diff = diffToPlainText();
+        return (
+          "// Left Json\n" +
+          left +
+          "\n\n// Right json\n" +
+          right +
+          "\n\n// Diff\n" +
+          diff
+        );
+      }
+
       function copyText(t) {
         try {
           navigator.clipboard.writeText(t);
@@ -998,6 +1015,9 @@
       });
       document.getElementById("btnCopyDiff").addEventListener("click", () => {
         copyText(diffToPlainText());
+      });
+      document.getElementById("btnCopyAll").addEventListener("click", () => {
+        copyText(buildCopyAllText());
       });
 
       document
