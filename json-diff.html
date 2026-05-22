@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JSON inspector</title>
+    <title>JSON diff</title>
     <style>
       * {
         box-sizing: border-box;
@@ -12,8 +12,8 @@
       }
       body {
         font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-          Ubuntu, Cantarell, sans-serif;
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
         background: #f5f7fb;
         padding: 20px;
         color: #1f2937;
@@ -291,30 +291,71 @@
         color: #6b7280;
         padding: 4px 0;
       }
+      .diff-legend {
+        font-size: 0.8125rem;
+        color: #4b5563;
+        margin-bottom: 12px;
+        padding: 10px 12px;
+        background: #f9fafb;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+      }
+      .diff-legend strong {
+        color: #111827;
+      }
+      .diff-legend ul {
+        margin: 8px 0 0;
+        padding-left: 1.2rem;
+      }
+      .diff-legend li {
+        margin-bottom: 6px;
+      }
+      .legend-swatch {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        margin-right: 6px;
+        vertical-align: -2px;
+      }
+      .legend-swatch.removed {
+        background: #fecaca;
+        border: 1px solid #ef4444;
+      }
+      .legend-swatch.added {
+        background: #bbf7d0;
+        border: 1px solid #22c55e;
+      }
+      .legend-swatch.changed {
+        background: #fde68a;
+        border: 1px solid #f59e0b;
+      }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <h1>JSON inspector</h1>
+      <h1>JSON diff</h1>
       <p class="sub">
-        Paste API or log output, then format, search, diff against a second snapshot,
-        and skim structure stats—all in the browser (nothing is uploaded).
+        Paste payloads in <strong>Left</strong> and <strong>Right</strong>,
+        format the left pane, search/highlight against the formatted Left view,
+        and diff Left vs Right. Everything runs locally (nothing is uploaded).
       </p>
       <ul class="feature-list">
         <li>
-          <strong>Validate & format</strong> — pretty-print or minify; errors show
-          JSON.parse position hints.
+          <strong>Validate & format</strong> — pretty-print or minify
+          <strong>Left JSON</strong>; errors show JSON.parse position hints.
         </li>
         <li>
-          <strong>Search & highlight</strong> — literal or regex, case option; jump
-          next / previous hit in preview.
+          <strong>Search & highlight</strong> — literal or regex on the formatted
+          Left preview; Next / Prev through hits.
         </li>
         <li>
-          <strong>Deep diff</strong> — positional array compare; keys merged for objects;
-          filter paths by substring.
+          <strong>Deep diff</strong> — compares <strong>Left</strong> to
+          <strong>Right</strong>; arrays by index; object keys merged. Filter diff
+          lines by path substring.
         </li>
         <li>
-          <strong>Stats</strong> — node counts, max depth, string / number tallies after
+          <strong>Stats</strong> — structure tallies computed from Left JSON after
           parse.
         </li>
       </ul>
@@ -323,21 +364,35 @@
 
       <div class="panels">
         <div>
-          <label for="jsonA">Primary JSON</label>
-          <textarea id="jsonA" spellcheck="false" placeholder='{ "example": true }'></textarea>
+          <label for="jsonLeft">Left JSON</label>
+          <textarea
+            id="jsonLeft"
+            spellcheck="false"
+            placeholder='{ "baseline": true } — used for format, preview search, stats, and diff (left-hand side)'
+          ></textarea>
         </div>
         <div>
-          <label for="jsonB">Compare JSON (optional, for diff)</label>
-          <textarea id="jsonB" spellcheck="false" placeholder="Second response or older version…"></textarea>
+          <label for="jsonRight">Right JSON</label>
+          <textarea
+            id="jsonRight"
+            spellcheck="false"
+            placeholder='{ "candidate": true } — right-hand side of the diff'
+          ></textarea>
         </div>
       </div>
 
       <div class="toolbar">
-        <button type="button" id="btnFormat">Format primary</button>
-        <button type="button" id="btnMinify" class="secondary">Minify primary</button>
-        <button type="button" id="btnStats" class="secondary">Parse & show stats</button>
-        <button type="button" id="btnDiff">Compare A vs B</button>
-        <button type="button" id="btnCopyA" class="secondary">Copy primary</button>
+        <button type="button" id="btnFormat">Format Left</button>
+        <button type="button" id="btnMinify" class="secondary">
+          Minify Left
+        </button>
+        <button type="button" id="btnStats" class="secondary">
+          Parse Left &amp; stats
+        </button>
+        <button type="button" id="btnDiff">Diff Left → Right</button>
+        <button type="button" id="btnCopyLeft" class="secondary">
+          Copy Left
+        </button>
         <button type="button" id="btnCopyDiff" class="secondary" disabled>
           Copy diff text
         </button>
@@ -345,7 +400,7 @@
 
       <div class="search-row">
         <div class="field">
-          <label for="searchQ">Search in formatted primary</label>
+          <label for="searchQ">Search in formatted Left (preview)</label>
           <input
             type="text"
             id="searchQ"
@@ -360,7 +415,9 @@
           >
           <label><input type="checkbox" id="searchRegex" /> Regex</label>
         </div>
-        <button type="button" id="btnPrev" class="secondary" disabled>↑ Prev</button>
+        <button type="button" id="btnPrev" class="secondary" disabled>
+          ↑ Prev
+        </button>
         <button type="button" id="btnNext" class="secondary" disabled>
           Next ↓
         </button>
@@ -368,25 +425,63 @@
       <p id="matchBadge" class="match-badge"></p>
 
       <div class="tabs" role="tablist">
-        <button type="button" class="tab" id="tabPreview" role="tab" aria-selected="true">
+        <button
+          type="button"
+          class="tab"
+          id="tabPreview"
+          role="tab"
+          aria-selected="true"
+        >
           Preview
         </button>
-        <button type="button" class="tab" id="tabDiff" role="tab" aria-selected="false">
+        <button
+          type="button"
+          class="tab"
+          id="tabDiff"
+          role="tab"
+          aria-selected="false"
+        >
           Diff
         </button>
-        <button type="button" class="tab" id="tabStats" role="tab" aria-selected="false">
+        <button
+          type="button"
+          class="tab"
+          id="tabStats"
+          role="tab"
+          aria-selected="false"
+        >
           Stats
         </button>
       </div>
 
       <div id="panelPreview" class="panel active" role="tabpanel">
         <p class="opt-hint">
-          Run <strong>Format primary</strong> or <strong>Parse & show stats</strong>,
-          then use search. Hits use yellow markers; the active jump target is darker.
+          Run <strong>Format Left</strong> or <strong>Parse Left & stats</strong>,
+          then search. Hits use yellow markers; the active jump target is darker.
         </p>
         <pre id="previewPane" aria-live="polite"></pre>
       </div>
       <div id="panelDiff" class="panel" role="tabpanel">
+        <div class="diff-legend" role="note">
+          <strong>How to read the diff</strong> (Left → Right comparison):
+          <ul>
+            <li>
+              <span class="legend-swatch removed"></span
+              ><strong>Only on Left</strong> — Right JSON has no property (or array
+              slot) here; Left still has this value (Right is missing it).
+            </li>
+            <li>
+              <span class="legend-swatch added"></span
+              ><strong>Only on Right</strong> — Left JSON has nothing here;
+              Right introduces this property or index (Left never had it).
+            </li>
+            <li>
+              <span class="legend-swatch changed"></span
+              ><strong>Different value or type</strong> — Both sides define this path,
+              but the value differs (or primitive vs object, etc.).
+            </li>
+          </ul>
+        </div>
         <div class="diff-filter">
           <label for="diffFilter">Filter diff lines (path contains)</label>
           <input
@@ -399,15 +494,19 @@
         <div id="diffPane"></div>
       </div>
       <div id="panelStats" class="panel" role="tabpanel">
-        <p id="statsPane">Parse primary JSON with the toolbar to fill stats.</p>
+        <p id="statsPane">
+          Parse Left JSON from the toolbar to fill stats.
+        </p>
       </div>
     </div>
 
     <script>
+      /** Left JSON formatted preview (mirror of textarea after Format / Minify). */
       /** @type {string} */
-      let formattedPrimary = "";
+      let formattedLeft = "";
       /** @type {unknown} */
-      let parsedPrimary = null;
+      let parsedLeft = null;
+      /** kind: removed = only Left; added = only Right; changed = both differ */
       /** @type {{ kind: string, path: string, left?: string, right?: string }[]} */
       let lastDiff = [];
       /** @type {HTMLElement[]} */
@@ -415,8 +514,8 @@
       let hitIndex = -1;
 
       const errEl = document.getElementById("err");
-      const jsonA = document.getElementById("jsonA");
-      const jsonB = document.getElementById("jsonB");
+      const jsonLeft = document.getElementById("jsonLeft");
+      const jsonRight = document.getElementById("jsonRight");
       const previewPane = document.getElementById("previewPane");
       const diffPane = document.getElementById("diffPane");
       const statsPane = document.getElementById("statsPane");
@@ -435,7 +534,9 @@
       }
 
       function trimBom(s) {
-        return String(s).replace(/^\uFEFF/, "").trim();
+        return String(s)
+          .replace(/^\uFEFF/, "")
+          .trim();
       }
 
       function parseJson(text, label) {
@@ -446,7 +547,8 @@
 
       function stableStringify(v) {
         if (v === null || typeof v !== "object") return JSON.stringify(v);
-        if (Array.isArray(v)) return "[" + v.map(stableStringify).join(",") + "]";
+        if (Array.isArray(v))
+          return "[" + v.map(stableStringify).join(",") + "]";
         const keys = Object.keys(v).sort();
         return (
           "{" +
@@ -474,57 +576,64 @@
       }
 
       /**
-       * @param {unknown} a
-       * @param {unknown} b
+       * @param {unknown} leftVal — Left JSON value at path
+       * @param {unknown} rightVal — Right JSON value at path
        * @param {string} path
        */
-      function diffDeep(a, b, path, out) {
-        if (valuesEqual(a, b)) return;
+      function diffDeep(leftVal, rightVal, path, out) {
+        if (valuesEqual(leftVal, rightVal)) return;
 
-        const ta = typeLabel(a);
-        const tb = typeLabel(b);
+        const ta = typeLabel(leftVal);
+        const tb = typeLabel(rightVal);
 
         if (ta !== tb) {
           out.push({
             kind: "changed",
             path,
-            left: ta + ": " + JSON.stringify(a),
-            right: tb + ": " + JSON.stringify(b),
+            left: ta + ": " + JSON.stringify(leftVal),
+            right: tb + ": " + JSON.stringify(rightVal),
           });
           return;
         }
 
-        if (a === null || typeof a !== "object") {
+        if (leftVal === null || typeof leftVal !== "object") {
           out.push({
             kind: "changed",
             path,
-            left: JSON.stringify(a),
-            right: JSON.stringify(b),
+            left: JSON.stringify(leftVal),
+            right: JSON.stringify(rightVal),
           });
           return;
         }
 
-        if (Array.isArray(a) && Array.isArray(b)) {
-          const len = Math.max(a.length, b.length);
+        if (Array.isArray(leftVal) && Array.isArray(rightVal)) {
+          const len = Math.max(leftVal.length, rightVal.length);
           for (let i = 0; i < len; i++) {
             const ip = `${path}[${i}]`;
-            if (i >= a.length) {
+            if (i >= leftVal.length) {
               out.push({
                 kind: "added",
                 path: ip,
-                right: JSON.stringify(b[i]),
+                right: JSON.stringify(rightVal[i]),
               });
-            } else if (i >= b.length) {
-              out.push({ kind: "removed", path: ip, left: JSON.stringify(a[i]) });
+            } else if (i >= rightVal.length) {
+              out.push({
+                kind: "removed",
+                path: ip,
+                left: JSON.stringify(leftVal[i]),
+              });
             } else {
-              diffDeep(a[i], b[i], ip, out);
+              diffDeep(leftVal[i], rightVal[i], ip, out);
             }
           }
           return;
         }
 
-        if (!Array.isArray(a) && !Array.isArray(b)) {
-          const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+        if (!Array.isArray(leftVal) && !Array.isArray(rightVal)) {
+          const keys = new Set([
+            ...Object.keys(leftVal),
+            ...Object.keys(rightVal),
+          ]);
           const sorted = [...keys].sort((x, y) =>
             x.localeCompare(y, undefined, { sensitivity: "base" }),
           );
@@ -532,22 +641,22 @@
             const pk = /^[a-zA-Z_$][\w$]*$/.test(k)
               ? `${path}.${k}`
               : `${path}[${JSON.stringify(k)}]`;
-            const ha = Object.prototype.hasOwnProperty.call(a, k);
-            const hb = Object.prototype.hasOwnProperty.call(b, k);
-            if (ha && !hb) {
+            const hl = Object.prototype.hasOwnProperty.call(leftVal, k);
+            const hr = Object.prototype.hasOwnProperty.call(rightVal, k);
+            if (hl && !hr) {
               out.push({
                 kind: "removed",
                 path: pk,
-                left: JSON.stringify(a[k]),
+                left: JSON.stringify(leftVal[k]),
               });
-            } else if (!ha && hb) {
+            } else if (!hl && hr) {
               out.push({
                 kind: "added",
                 path: pk,
-                right: JSON.stringify(b[k]),
+                right: JSON.stringify(rightVal[k]),
               });
             } else {
-              diffDeep(a[k], b[k], pk, out);
+              diffDeep(leftVal[k], rightVal[k], pk, out);
             }
           }
           return;
@@ -556,8 +665,8 @@
         out.push({
           kind: "changed",
           path,
-          left: JSON.stringify(a),
-          right: JSON.stringify(b),
+          left: JSON.stringify(leftVal),
+          right: JSON.stringify(rightVal),
         });
       }
 
@@ -645,9 +754,7 @@
           if (m[0].length === 0) rx.lastIndex++;
         }
         if (last < formattedText.length) {
-          frag.appendChild(
-            document.createTextNode(formattedText.slice(last)),
-          );
+          frag.appendChild(document.createTextNode(formattedText.slice(last)));
         }
         previewPane.appendChild(frag);
         previewPane.normalize();
@@ -675,20 +782,20 @@
         matchBadge.textContent = `Match ${hitIndex + 1} / ${hitElements.length}`;
       }
 
-      function formatPrimary(space) {
+      function formatLeftJson(space) {
         showErr("");
         try {
-          const data = parseJson(jsonA.value, "Primary JSON");
-          parsedPrimary = data;
+          const data = parseJson(jsonLeft.value, "Left JSON");
+          parsedLeft = data;
           const text = JSON.stringify(data, null, space);
-          jsonA.value = text;
-          formattedPrimary = text;
+          jsonLeft.value = text;
+          formattedLeft = text;
           previewPane.innerHTML = "";
-          applySearchHighlights(formattedPrimary);
+          applySearchHighlights(formattedLeft);
           return true;
         } catch (e) {
-          parsedPrimary = null;
-          formattedPrimary = "";
+          parsedLeft = null;
+          formattedLeft = "";
           showErr((e && e.message) || String(e));
           previewPane.innerHTML = "";
           return false;
@@ -723,15 +830,16 @@
         }
         if (t === "object") {
           stats.objects++;
-          for (const k of Object.keys(val)) collectStats(val[k], stats, depth + 1);
+          for (const k of Object.keys(val))
+            collectStats(val[k], stats, depth + 1);
         }
       }
 
       function renderStats() {
         showErr("");
         try {
-          const data = parseJson(jsonA.value, "Primary JSON");
-          parsedPrimary = data;
+          const data = parseJson(jsonLeft.value, "Left JSON");
+          parsedLeft = data;
           const stats = {
             nodes: 0,
             maxDepth: 0,
@@ -760,10 +868,10 @@
       function renderDiff() {
         showErr("");
         try {
-          const a = parseJson(jsonA.value, "Primary JSON");
-          const b = parseJson(jsonB.value, "Compare JSON");
+          const leftData = parseJson(jsonLeft.value, "Left JSON");
+          const rightData = parseJson(jsonRight.value, "Right JSON");
           const out = [];
-          diffDeep(a, b, "$", out);
+          diffDeep(leftData, rightData, "$", out);
           lastDiff = out;
           filterAndPaintDiff();
           btnCopyDiff.disabled = out.length === 0;
@@ -786,7 +894,7 @@
         if (rows.length === 0) {
           diffPane.textContent = lastDiff.length
             ? "No diff lines match the filter."
-            : "No differences (values are equal), or run Compare first.";
+            : "No differences (Left and Right values are equal), or run Diff first.";
           return;
         }
 
@@ -799,16 +907,23 @@
           div.appendChild(pathSpan);
           if (d.kind === "removed") {
             div.appendChild(
-              document.createTextNode("  − " + (d.left || "")),
+              document.createTextNode(
+                " — only on Left (missing on Right): " + (d.left || ""),
+              ),
             );
           } else if (d.kind === "added") {
             div.appendChild(
-              document.createTextNode("  + " + (d.right || "")),
+              document.createTextNode(
+                " — only on Right (missing on Left): " + (d.right || ""),
+              ),
             );
           } else {
             div.appendChild(
               document.createTextNode(
-                "\n  was: " + (d.left || "") + "\n  now: " + (d.right || ""),
+                "\n  Left:  " +
+                  (d.left || "") +
+                  "\n  Right: " +
+                  (d.right || ""),
               ),
             );
           }
@@ -819,9 +934,19 @@
       function diffToPlainText() {
         const lines = [];
         for (const d of lastDiff) {
-          if (d.kind === "removed") lines.push(`${d.path}  - ${d.left}`);
-          else if (d.kind === "added") lines.push(`${d.path}  + ${d.right}`);
-          else lines.push(`${d.path}\n  was: ${d.left}\n  now: ${d.right}`);
+          if (d.kind === "removed") {
+            lines.push(
+              `${d.path}  only on Left (missing on Right): ${d.left}`,
+            );
+          } else if (d.kind === "added") {
+            lines.push(
+              `${d.path}  only on Right (missing on Left): ${d.right}`,
+            );
+          } else {
+            lines.push(
+              `${d.path}\n  Left:  ${d.left}\n  Right: ${d.right}`,
+            );
+          }
         }
         return lines.join("\n\n");
       }
@@ -859,38 +984,40 @@
       }
 
       document.getElementById("btnFormat").addEventListener("click", () => {
-        if (formatPrimary(2)) switchTab("preview");
+        if (formatLeftJson(2)) switchTab("preview");
       });
       document.getElementById("btnMinify").addEventListener("click", () => {
-        if (formatPrimary(null)) switchTab("preview");
+        if (formatLeftJson(null)) switchTab("preview");
       });
-      document.getElementById("btnStats").addEventListener("click", renderStats);
+      document
+        .getElementById("btnStats")
+        .addEventListener("click", renderStats);
       document.getElementById("btnDiff").addEventListener("click", renderDiff);
-      document.getElementById("btnCopyA").addEventListener("click", () => {
-        copyText(jsonA.value);
+      document.getElementById("btnCopyLeft").addEventListener("click", () => {
+        copyText(jsonLeft.value);
       });
       document.getElementById("btnCopyDiff").addEventListener("click", () => {
         copyText(diffToPlainText());
       });
 
-      document.getElementById("tabPreview").addEventListener("click", () =>
-        switchTab("preview"),
-      );
-      document.getElementById("tabDiff").addEventListener("click", () =>
-        switchTab("diff"),
-      );
-      document.getElementById("tabStats").addEventListener("click", () =>
-        switchTab("stats"),
-      );
+      document
+        .getElementById("tabPreview")
+        .addEventListener("click", () => switchTab("preview"));
+      document
+        .getElementById("tabDiff")
+        .addEventListener("click", () => switchTab("diff"));
+      document
+        .getElementById("tabStats")
+        .addEventListener("click", () => switchTab("stats"));
 
       searchQ.addEventListener("input", () => {
-        if (formattedPrimary) applySearchHighlights(formattedPrimary);
+        if (formattedLeft) applySearchHighlights(formattedLeft);
       });
       searchCase.addEventListener("change", () => {
-        if (formattedPrimary) applySearchHighlights(formattedPrimary);
+        if (formattedLeft) applySearchHighlights(formattedLeft);
       });
       searchRegex.addEventListener("change", () => {
-        if (formattedPrimary) applySearchHighlights(formattedPrimary);
+        if (formattedLeft) applySearchHighlights(formattedLeft);
       });
 
       btnPrev.addEventListener("click", () => setActiveHit(hitIndex - 1));
@@ -902,10 +1029,10 @@
         if (
           e.key === "Enter" &&
           (e.metaKey || e.ctrlKey) &&
-          document.activeElement === jsonA
+          document.activeElement === jsonLeft
         ) {
           e.preventDefault();
-          if (formatPrimary(2)) switchTab("preview");
+          if (formatLeftJson(2)) switchTab("preview");
         }
         if (
           hitElements.length &&
@@ -918,7 +1045,6 @@
           else setActiveHit(hitIndex - 1);
         }
       });
-
     </script>
   </body>
 </html>

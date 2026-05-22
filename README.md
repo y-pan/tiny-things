@@ -38,7 +38,7 @@
 
 19. [Historical Data Charts](https://y-pan.github.io/tiny-things/historical-data-charts.html)
 
-20. [Json Inspector](https://y-pan.github.io/tiny-things/json-inspector.html)
+20. [Json Diff](https://y-pan.github.io/tiny-things/json-diff.html)
 
 21. [Random String Generator](https://y-pan.github.io/tiny-things/random-string-generator.html)
 
