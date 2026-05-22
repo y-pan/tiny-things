@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSON inspector</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+          Ubuntu, Cantarell, sans-serif;
+        background: #f5f7fb;
+        padding: 20px;
+        color: #1f2937;
+        line-height: 1.5;
+      }
+      .wrap {
+        max-width: 1160px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 8px;
+      }
+      .sub {
+        color: #6b7280;
+        font-size: 0.9rem;
+        margin-bottom: 16px;
+      }
+      .feature-list {
+        margin: 0 0 20px;
+        padding-left: 1.25rem;
+        color: #4b5563;
+        font-size: 0.875rem;
+      }
+      .feature-list li {
+        margin-bottom: 6px;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.85rem;
+        margin-bottom: 6px;
+        color: #374151;
+      }
+      textarea {
+        width: 100%;
+        min-height: 180px;
+        padding: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        font-family:
+          ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        background: #fff;
+        resize: vertical;
+      }
+      textarea:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+      .panels {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 14px;
+      }
+      @media (max-width: 900px) {
+        .panels {
+          grid-template-columns: 1fr;
+        }
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 10px;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+      button {
+        background: #4f46e5;
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #4338ca;
+      }
+      button.secondary {
+        background: #fff;
+        color: #374151;
+        border: 1px solid #e5e7eb;
+      }
+      button.secondary:hover {
+        background: #f9fafb;
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .search-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: flex-end;
+        margin-bottom: 14px;
+      }
+      .search-row .field {
+        flex: 1;
+        min-width: 160px;
+      }
+      .search-row input[type="text"] {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 0.875rem;
+      }
+      .search-row input[type="text"]:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+      .checkboxes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 16px;
+        align-items: center;
+        font-size: 0.8125rem;
+        color: #4b5563;
+      }
+      .checkboxes label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .tabs button.tab {
+        background: transparent;
+        color: #6b7280;
+        border: none;
+        border-bottom: 2px solid transparent;
+        padding: 10px 14px;
+        margin-bottom: -1px;
+        border-radius: 8px 8px 0 0;
+        font-weight: 600;
+      }
+      .tabs button.tab:hover {
+        background: rgba(79, 70, 229, 0.06);
+        color: #4338ca;
+      }
+      .tabs button.tab[aria-selected="true"] {
+        color: #4f46e5;
+        border-bottom-color: #6366f1;
+      }
+      .panel {
+        display: none;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 12px;
+        min-height: 220px;
+      }
+      .panel.active {
+        display: block;
+      }
+      #previewPane {
+        font-family:
+          ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 11px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: min(62vh, 720px);
+        overflow: auto;
+        margin: 0;
+      }
+      #previewPane mark.hit {
+        background: #fde047;
+        color: inherit;
+        padding: 0 1px;
+        border-radius: 2px;
+      }
+      #previewPane mark.hit-active {
+        background: #eab308;
+        outline: 2px solid #ca8a04;
+      }
+      #diffPane {
+        font-family:
+          ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 11px;
+        max-height: min(62vh, 720px);
+        overflow: auto;
+      }
+      .diff-line {
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-bottom: 4px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .diff-line.removed {
+        background: #fef2f2;
+        border-left: 3px solid #ef4444;
+      }
+      .diff-line.added {
+        background: #f0fdf4;
+        border-left: 3px solid #22c55e;
+      }
+      .diff-line.changed {
+        background: #fffbeb;
+        border-left: 3px solid #f59e0b;
+      }
+      .diff-path {
+        color: #1e40af;
+        font-weight: 600;
+      }
+      #statsPane {
+        font-size: 0.875rem;
+        color: #374151;
+      }
+      #statsPane dl {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 6px 20px;
+        max-width: 28rem;
+      }
+      #statsPane dt {
+        color: #6b7280;
+        font-weight: 600;
+      }
+      .diff-filter {
+        margin-bottom: 10px;
+      }
+      .diff-filter input {
+        width: 100%;
+        max-width: 24rem;
+        padding: 6px 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 0.8125rem;
+      }
+      .opt-hint {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        margin-top: 8px;
+      }
+      .err {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        white-space: pre-wrap;
+        font-family: ui-monospace, monospace;
+        display: none;
+        margin-bottom: 14px;
+      }
+      .err.visible {
+        display: block;
+      }
+      .match-badge {
+        font-size: 0.75rem;
+        color: #6b7280;
+        padding: 4px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>JSON inspector</h1>
+      <p class="sub">
+        Paste API or log output, then format, search, diff against a second snapshot,
+        and skim structure stats—all in the browser (nothing is uploaded).
+      </p>
+      <ul class="feature-list">
+        <li>
+          <strong>Validate & format</strong> — pretty-print or minify; errors show
+          JSON.parse position hints.
+        </li>
+        <li>
+          <strong>Search & highlight</strong> — literal or regex, case option; jump
+          next / previous hit in preview.
+        </li>
+        <li>
+          <strong>Deep diff</strong> — positional array compare; keys merged for objects;
+          filter paths by substring.
+        </li>
+        <li>
+          <strong>Stats</strong> — node counts, max depth, string / number tallies after
+          parse.
+        </li>
+      </ul>
+
+      <div id="err" class="err" role="alert"></div>
+
+      <div class="panels">
+        <div>
+          <label for="jsonA">Primary JSON</label>
+          <textarea id="jsonA" spellcheck="false" placeholder='{ "example": true }'></textarea>
+        </div>
+        <div>
+          <label for="jsonB">Compare JSON (optional, for diff)</label>
+          <textarea id="jsonB" spellcheck="false" placeholder="Second response or older version…"></textarea>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button type="button" id="btnFormat">Format primary</button>
+        <button type="button" id="btnMinify" class="secondary">Minify primary</button>
+        <button type="button" id="btnStats" class="secondary">Parse & show stats</button>
+        <button type="button" id="btnDiff">Compare A vs B</button>
+        <button type="button" id="btnCopyA" class="secondary">Copy primary</button>
+        <button type="button" id="btnCopyDiff" class="secondary" disabled>
+          Copy diff text
+        </button>
+      </div>
+
+      <div class="search-row">
+        <div class="field">
+          <label for="searchQ">Search in formatted primary</label>
+          <input
+            type="text"
+            id="searchQ"
+            placeholder="Type to highlight in preview…"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <div class="checkboxes">
+          <label
+            ><input type="checkbox" id="searchCase" /> Case sensitive</label
+          >
+          <label><input type="checkbox" id="searchRegex" /> Regex</label>
+        </div>
+        <button type="button" id="btnPrev" class="secondary" disabled>↑ Prev</button>
+        <button type="button" id="btnNext" class="secondary" disabled>
+          Next ↓
+        </button>
+      </div>
+      <p id="matchBadge" class="match-badge"></p>
+
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab" id="tabPreview" role="tab" aria-selected="true">
+          Preview
+        </button>
+        <button type="button" class="tab" id="tabDiff" role="tab" aria-selected="false">
+          Diff
+        </button>
+        <button type="button" class="tab" id="tabStats" role="tab" aria-selected="false">
+          Stats
+        </button>
+      </div>
+
+      <div id="panelPreview" class="panel active" role="tabpanel">
+        <p class="opt-hint">
+          Run <strong>Format primary</strong> or <strong>Parse & show stats</strong>,
+          then use search. Hits use yellow markers; the active jump target is darker.
+        </p>
+        <pre id="previewPane" aria-live="polite"></pre>
+      </div>
+      <div id="panelDiff" class="panel" role="tabpanel">
+        <div class="diff-filter">
+          <label for="diffFilter">Filter diff lines (path contains)</label>
+          <input
+            type="text"
+            id="diffFilter"
+            placeholder="e.g. data.items — leave empty for all"
+            autocomplete="off"
+          />
+        </div>
+        <div id="diffPane"></div>
+      </div>
+      <div id="panelStats" class="panel" role="tabpanel">
+        <p id="statsPane">Parse primary JSON with the toolbar to fill stats.</p>
+      </div>
+    </div>
+
+    <script>
+      /** @type {string} */
+      let formattedPrimary = "";
+      /** @type {unknown} */
+      let parsedPrimary = null;
+      /** @type {{ kind: string, path: string, left?: string, right?: string }[]} */
+      let lastDiff = [];
+      /** @type {HTMLElement[]} */
+      let hitElements = [];
+      let hitIndex = -1;
+
+      const errEl = document.getElementById("err");
+      const jsonA = document.getElementById("jsonA");
+      const jsonB = document.getElementById("jsonB");
+      const previewPane = document.getElementById("previewPane");
+      const diffPane = document.getElementById("diffPane");
+      const statsPane = document.getElementById("statsPane");
+      const searchQ = document.getElementById("searchQ");
+      const searchCase = document.getElementById("searchCase");
+      const searchRegex = document.getElementById("searchRegex");
+      const matchBadge = document.getElementById("matchBadge");
+      const btnPrev = document.getElementById("btnPrev");
+      const btnNext = document.getElementById("btnNext");
+      const btnCopyDiff = document.getElementById("btnCopyDiff");
+      const diffFilter = document.getElementById("diffFilter");
+
+      function showErr(msg) {
+        errEl.textContent = msg;
+        errEl.classList.toggle("visible", Boolean(msg));
+      }
+
+      function trimBom(s) {
+        return String(s).replace(/^\uFEFF/, "").trim();
+      }
+
+      function parseJson(text, label) {
+        const t = trimBom(text);
+        if (!t) throw new Error(`${label} is empty.`);
+        return JSON.parse(t);
+      }
+
+      function stableStringify(v) {
+        if (v === null || typeof v !== "object") return JSON.stringify(v);
+        if (Array.isArray(v)) return "[" + v.map(stableStringify).join(",") + "]";
+        const keys = Object.keys(v).sort();
+        return (
+          "{" +
+          keys
+            .map((k) => JSON.stringify(k) + ":" + stableStringify(v[k]))
+            .join(",") +
+          "}"
+        );
+      }
+
+      function valuesEqual(a, b) {
+        if (typeof a === "number" && typeof b === "number") {
+          if (Number.isNaN(a) && Number.isNaN(b)) return true;
+        }
+        if (typeof a !== typeof b) return false;
+        if (a === b) return true;
+        return stableStringify(a) === stableStringify(b);
+      }
+
+      /** @returns {string} */
+      function typeLabel(v) {
+        if (v === null) return "null";
+        if (Array.isArray(v)) return "array";
+        return typeof v;
+      }
+
+      /**
+       * @param {unknown} a
+       * @param {unknown} b
+       * @param {string} path
+       */
+      function diffDeep(a, b, path, out) {
+        if (valuesEqual(a, b)) return;
+
+        const ta = typeLabel(a);
+        const tb = typeLabel(b);
+
+        if (ta !== tb) {
+          out.push({
+            kind: "changed",
+            path,
+            left: ta + ": " + JSON.stringify(a),
+            right: tb + ": " + JSON.stringify(b),
+          });
+          return;
+        }
+
+        if (a === null || typeof a !== "object") {
+          out.push({
+            kind: "changed",
+            path,
+            left: JSON.stringify(a),
+            right: JSON.stringify(b),
+          });
+          return;
+        }
+
+        if (Array.isArray(a) && Array.isArray(b)) {
+          const len = Math.max(a.length, b.length);
+          for (let i = 0; i < len; i++) {
+            const ip = `${path}[${i}]`;
+            if (i >= a.length) {
+              out.push({
+                kind: "added",
+                path: ip,
+                right: JSON.stringify(b[i]),
+              });
+            } else if (i >= b.length) {
+              out.push({ kind: "removed", path: ip, left: JSON.stringify(a[i]) });
+            } else {
+              diffDeep(a[i], b[i], ip, out);
+            }
+          }
+          return;
+        }
+
+        if (!Array.isArray(a) && !Array.isArray(b)) {
+          const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+          const sorted = [...keys].sort((x, y) =>
+            x.localeCompare(y, undefined, { sensitivity: "base" }),
+          );
+          for (const k of sorted) {
+            const pk = /^[a-zA-Z_$][\w$]*$/.test(k)
+              ? `${path}.${k}`
+              : `${path}[${JSON.stringify(k)}]`;
+            const ha = Object.prototype.hasOwnProperty.call(a, k);
+            const hb = Object.prototype.hasOwnProperty.call(b, k);
+            if (ha && !hb) {
+              out.push({
+                kind: "removed",
+                path: pk,
+                left: JSON.stringify(a[k]),
+              });
+            } else if (!ha && hb) {
+              out.push({
+                kind: "added",
+                path: pk,
+                right: JSON.stringify(b[k]),
+              });
+            } else {
+              diffDeep(a[k], b[k], pk, out);
+            }
+          }
+          return;
+        }
+
+        out.push({
+          kind: "changed",
+          path,
+          left: JSON.stringify(a),
+          right: JSON.stringify(b),
+        });
+      }
+
+      function escapeHtml(s) {
+        return s
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      /** @returns {RegExp | null} */
+      function buildSearchMatcher() {
+        const raw = searchQ.value || "";
+        if (!raw.trim()) return null;
+        const flagsU = searchCase.checked ? "gu" : "giu";
+        if (searchRegex.checked) {
+          try {
+            return new RegExp(raw, flagsU);
+          } catch (e) {
+            throw new Error("Invalid regex: " + ((e && e.message) || e));
+          }
+        }
+        const pattern = escapeRegExp(raw);
+        return new RegExp(pattern, flagsU);
+
+        function escapeRegExp(text) {
+          return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        }
+      }
+
+      function applySearchHighlights(formattedText) {
+        previewPane.innerHTML = "";
+        hitElements = [];
+        hitIndex = -1;
+        const escaped = escapeHtml(formattedText);
+        if (!searchQ.value.trim()) {
+          previewPane.innerHTML = escaped;
+          matchBadge.textContent = "";
+          btnPrev.disabled = true;
+          btnNext.disabled = true;
+          return;
+        }
+
+        let rx;
+        try {
+          rx = buildSearchMatcher();
+        } catch (e) {
+          showErr(e.message || String(e));
+          previewPane.innerHTML = escaped;
+          matchBadge.textContent = "";
+          btnPrev.disabled = true;
+          btnNext.disabled = true;
+          return;
+        }
+
+        if (!rx) {
+          previewPane.innerHTML = escaped;
+          matchBadge.textContent = "";
+          btnPrev.disabled = true;
+          btnNext.disabled = true;
+          return;
+        }
+
+        const frag = document.createDocumentFragment();
+        rx.lastIndex = 0;
+        let last = 0;
+        let m;
+        let count = 0;
+        while ((m = rx.exec(formattedText)) !== null) {
+          const start = m.index;
+          const end = start + m[0].length;
+          if (start > last) {
+            frag.appendChild(
+              document.createTextNode(formattedText.slice(last, start)),
+            );
+          }
+          const mark = document.createElement("mark");
+          mark.className = "hit";
+          mark.textContent = formattedText.slice(start, end);
+          frag.appendChild(mark);
+          hitElements.push(mark);
+          count++;
+          last = end;
+          if (m[0].length === 0) rx.lastIndex++;
+        }
+        if (last < formattedText.length) {
+          frag.appendChild(
+            document.createTextNode(formattedText.slice(last)),
+          );
+        }
+        previewPane.appendChild(frag);
+        previewPane.normalize();
+
+        matchBadge.textContent =
+          count === 0
+            ? "No matches."
+            : `${count} match${count === 1 ? "" : "es"}. Use Next / Prev.`;
+        btnPrev.disabled = count === 0;
+        btnNext.disabled = count === 0;
+        if (count > 0) {
+          setActiveHit(0);
+        }
+      }
+
+      function setActiveHit(idx) {
+        if (hitElements.length === 0) return;
+        hitIndex =
+          ((idx % hitElements.length) + hitElements.length) %
+          hitElements.length;
+        for (const el of hitElements) el.classList.remove("hit-active");
+        const active = hitElements[hitIndex];
+        active.classList.add("hit-active");
+        active.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        matchBadge.textContent = `Match ${hitIndex + 1} / ${hitElements.length}`;
+      }
+
+      function formatPrimary(space) {
+        showErr("");
+        try {
+          const data = parseJson(jsonA.value, "Primary JSON");
+          parsedPrimary = data;
+          const text = JSON.stringify(data, null, space);
+          jsonA.value = text;
+          formattedPrimary = text;
+          previewPane.innerHTML = "";
+          applySearchHighlights(formattedPrimary);
+          return true;
+        } catch (e) {
+          parsedPrimary = null;
+          formattedPrimary = "";
+          showErr((e && e.message) || String(e));
+          previewPane.innerHTML = "";
+          return false;
+        }
+      }
+
+      function collectStats(val, stats, depth) {
+        stats.nodes++;
+        if (depth > stats.maxDepth) stats.maxDepth = depth;
+        if (val === null) {
+          stats.nulls++;
+          return;
+        }
+        const t = typeof val;
+        if (t === "boolean") {
+          stats.booleans++;
+          return;
+        }
+        if (t === "number") {
+          stats.numbers++;
+          return;
+        }
+        if (t === "string") {
+          stats.strings++;
+          stats.stringChars += val.length;
+          return;
+        }
+        if (Array.isArray(val)) {
+          stats.arrays++;
+          for (const item of val) collectStats(item, stats, depth + 1);
+          return;
+        }
+        if (t === "object") {
+          stats.objects++;
+          for (const k of Object.keys(val)) collectStats(val[k], stats, depth + 1);
+        }
+      }
+
+      function renderStats() {
+        showErr("");
+        try {
+          const data = parseJson(jsonA.value, "Primary JSON");
+          parsedPrimary = data;
+          const stats = {
+            nodes: 0,
+            maxDepth: 0,
+            nulls: 0,
+            booleans: 0,
+            numbers: 0,
+            strings: 0,
+            objects: 0,
+            arrays: 0,
+            stringChars: 0,
+          };
+          collectStats(data, stats, 0);
+          statsPane.innerHTML = `<dl>
+            <dt>Total nodes</dt><dd>${stats.nodes}</dd>
+            <dt>Max depth</dt><dd>${stats.maxDepth}</dd>
+            <dt>Objects / arrays</dt><dd>${stats.objects} / ${stats.arrays}</dd>
+            <dt>Null / boolean / number</dt><dd>${stats.nulls} / ${stats.booleans} / ${stats.numbers}</dd>
+            <dt>Strings</dt><dd>${stats.strings} (≈ ${stats.stringChars} characters)</dd>
+          </dl>`;
+          switchTab("stats");
+        } catch (e) {
+          showErr((e && e.message) || String(e));
+        }
+      }
+
+      function renderDiff() {
+        showErr("");
+        try {
+          const a = parseJson(jsonA.value, "Primary JSON");
+          const b = parseJson(jsonB.value, "Compare JSON");
+          const out = [];
+          diffDeep(a, b, "$", out);
+          lastDiff = out;
+          filterAndPaintDiff();
+          btnCopyDiff.disabled = out.length === 0;
+          switchTab("diff");
+        } catch (e) {
+          lastDiff = [];
+          diffPane.innerHTML = "";
+          btnCopyDiff.disabled = true;
+          showErr((e && e.message) || String(e));
+        }
+      }
+
+      function filterAndPaintDiff() {
+        const q = (diffFilter.value || "").trim().toLowerCase();
+        const rows = q
+          ? lastDiff.filter((d) => d.path.toLowerCase().includes(q))
+          : lastDiff;
+
+        diffPane.innerHTML = "";
+        if (rows.length === 0) {
+          diffPane.textContent = lastDiff.length
+            ? "No diff lines match the filter."
+            : "No differences (values are equal), or run Compare first.";
+          return;
+        }
+
+        for (const d of rows) {
+          const div = document.createElement("div");
+          div.className = "diff-line " + d.kind;
+          const pathSpan = document.createElement("span");
+          pathSpan.className = "diff-path";
+          pathSpan.textContent = d.path;
+          div.appendChild(pathSpan);
+          if (d.kind === "removed") {
+            div.appendChild(
+              document.createTextNode("  − " + (d.left || "")),
+            );
+          } else if (d.kind === "added") {
+            div.appendChild(
+              document.createTextNode("  + " + (d.right || "")),
+            );
+          } else {
+            div.appendChild(
+              document.createTextNode(
+                "\n  was: " + (d.left || "") + "\n  now: " + (d.right || ""),
+              ),
+            );
+          }
+          diffPane.appendChild(div);
+        }
+      }
+
+      function diffToPlainText() {
+        const lines = [];
+        for (const d of lastDiff) {
+          if (d.kind === "removed") lines.push(`${d.path}  - ${d.left}`);
+          else if (d.kind === "added") lines.push(`${d.path}  + ${d.right}`);
+          else lines.push(`${d.path}\n  was: ${d.left}\n  now: ${d.right}`);
+        }
+        return lines.join("\n\n");
+      }
+
+      function copyText(t) {
+        try {
+          navigator.clipboard.writeText(t);
+        } catch (_) {
+          const ta = document.createElement("textarea");
+          ta.value = t;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+        }
+      }
+
+      function switchTab(which) {
+        const tabPreview = document.getElementById("tabPreview");
+        const tabDiff = document.getElementById("tabDiff");
+        const tabStats = document.getElementById("tabStats");
+        const panelPreview = document.getElementById("panelPreview");
+        const panelDiff = document.getElementById("panelDiff");
+        const panelStats = document.getElementById("panelStats");
+
+        tabPreview.setAttribute("aria-selected", which === "preview");
+        tabDiff.setAttribute("aria-selected", which === "diff");
+        tabStats.setAttribute("aria-selected", which === "stats");
+        tabPreview.tabIndex = which === "preview" ? 0 : -1;
+        tabDiff.tabIndex = which === "diff" ? 0 : -1;
+        tabStats.tabIndex = which === "stats" ? 0 : -1;
+        panelPreview.classList.toggle("active", which === "preview");
+        panelDiff.classList.toggle("active", which === "diff");
+        panelStats.classList.toggle("active", which === "stats");
+      }
+
+      document.getElementById("btnFormat").addEventListener("click", () => {
+        if (formatPrimary(2)) switchTab("preview");
+      });
+      document.getElementById("btnMinify").addEventListener("click", () => {
+        if (formatPrimary(null)) switchTab("preview");
+      });
+      document.getElementById("btnStats").addEventListener("click", renderStats);
+      document.getElementById("btnDiff").addEventListener("click", renderDiff);
+      document.getElementById("btnCopyA").addEventListener("click", () => {
+        copyText(jsonA.value);
+      });
+      document.getElementById("btnCopyDiff").addEventListener("click", () => {
+        copyText(diffToPlainText());
+      });
+
+      document.getElementById("tabPreview").addEventListener("click", () =>
+        switchTab("preview"),
+      );
+      document.getElementById("tabDiff").addEventListener("click", () =>
+        switchTab("diff"),
+      );
+      document.getElementById("tabStats").addEventListener("click", () =>
+        switchTab("stats"),
+      );
+
+      searchQ.addEventListener("input", () => {
+        if (formattedPrimary) applySearchHighlights(formattedPrimary);
+      });
+      searchCase.addEventListener("change", () => {
+        if (formattedPrimary) applySearchHighlights(formattedPrimary);
+      });
+      searchRegex.addEventListener("change", () => {
+        if (formattedPrimary) applySearchHighlights(formattedPrimary);
+      });
+
+      btnPrev.addEventListener("click", () => setActiveHit(hitIndex - 1));
+      btnNext.addEventListener("click", () => setActiveHit(hitIndex + 1));
+
+      diffFilter.addEventListener("input", filterAndPaintDiff);
+
+      document.addEventListener("keydown", (e) => {
+        if (
+          e.key === "Enter" &&
+          (e.metaKey || e.ctrlKey) &&
+          document.activeElement === jsonA
+        ) {
+          e.preventDefault();
+          if (formatPrimary(2)) switchTab("preview");
+        }
+        if (
+          hitElements.length &&
+          (e.key === "g" || e.key === "G") &&
+          !e.altKey &&
+          (e.metaKey || e.ctrlKey)
+        ) {
+          e.preventDefault();
+          if (!e.shiftKey) setActiveHit(hitIndex + 1);
+          else setActiveHit(hitIndex - 1);
+        }
+      });
+
+    </script>
+  </body>
+</html>

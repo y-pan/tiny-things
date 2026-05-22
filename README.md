@@ -38,15 +38,17 @@
 
 19. [Historical Data Charts](https://y-pan.github.io/tiny-things/historical-data-charts.html)
 
-20. [Random String Generator](https://y-pan.github.io/tiny-things/random-string-generator.html)
+20. [Json Inspector](https://y-pan.github.io/tiny-things/json-inspector.html)
 
-21. [Regex](https://y-pan.github.io/tiny-things/regex.html)
+21. [Random String Generator](https://y-pan.github.io/tiny-things/random-string-generator.html)
 
-22. [Svg Tool](https://y-pan.github.io/tiny-things/svg-tool.html)
+22. [Regex](https://y-pan.github.io/tiny-things/regex.html)
 
-23. [Time](https://y-pan.github.io/tiny-things/time.html)
+23. [Svg Tool](https://y-pan.github.io/tiny-things/svg-tool.html)
 
-24. [Token](https://y-pan.github.io/tiny-things/token.html)
+24. [Time](https://y-pan.github.io/tiny-things/time.html)
 
-25. [Transition Generator](https://y-pan.github.io/tiny-things/transition-generator.html)
+25. [Token](https://y-pan.github.io/tiny-things/token.html)
+
+26. [Transition Generator](https://y-pan.github.io/tiny-things/transition-generator.html)
 
