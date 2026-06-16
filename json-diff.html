@@ -390,6 +390,9 @@
           Parse Left &amp; stats
         </button>
         <button type="button" id="btnDiff">Diff Left → Right</button>
+        <button type="button" id="btnSwapDiff" class="secondary">
+          Swap Left &amp; Right
+        </button>
         <button type="button" id="btnCopyLeft" class="secondary">
           Copy Left
         </button>
@@ -868,6 +871,17 @@
         }
       }
 
+      function swapLeftRightAndDiff() {
+        showErr("");
+        const tmp = jsonLeft.value;
+        jsonLeft.value = jsonRight.value;
+        jsonRight.value = tmp;
+        formattedLeft = "";
+        parsedLeft = null;
+        applySearchHighlights("");
+        renderDiff();
+      }
+
       function renderDiff() {
         showErr("");
         try {
@@ -1010,6 +1024,9 @@
         .getElementById("btnStats")
         .addEventListener("click", renderStats);
       document.getElementById("btnDiff").addEventListener("click", renderDiff);
+      document
+        .getElementById("btnSwapDiff")
+        .addEventListener("click", swapLeftRightAndDiff);
       document.getElementById("btnCopyLeft").addEventListener("click", () => {
         copyText(jsonLeft.value);
       });

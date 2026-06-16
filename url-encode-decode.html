@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>URL encode / decode</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background: #f5f7fb;
+        padding: 20px;
+        color: #1f2937;
+        line-height: 1.5;
+      }
+      .wrap {
+        max-width: 1160px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 8px;
+      }
+      .sub {
+        color: #6b7280;
+        font-size: 0.9rem;
+        margin-bottom: 16px;
+      }
+      .toolbar-top {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      #sectionsRoot {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .section-row {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      }
+      .section-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+      .section-head h2 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #111827;
+      }
+      .panels {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        align-items: start;
+      }
+      @media (max-width: 900px) {
+        .panels {
+          grid-template-columns: 1fr;
+        }
+      }
+      .panel {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px;
+      }
+      .panel h3 {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 4px;
+      }
+      .panel .hint {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-bottom: 12px;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.85rem;
+        margin-bottom: 6px;
+        color: #374151;
+      }
+      textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        font-family:
+          ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        background: #fff;
+        resize: vertical;
+        margin-bottom: 12px;
+      }
+      textarea.output {
+        background: #f3f4f6;
+      }
+      textarea:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      }
+      .field-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      button {
+        background: #4f46e5;
+        color: #fff;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.8125rem;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #4338ca;
+      }
+      button.secondary {
+        background: #fff;
+        color: #374151;
+        border: 1px solid #e5e7eb;
+      }
+      button.secondary:hover {
+        background: #f9fafb;
+      }
+      button.danger {
+        background: #fff;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+      }
+      button.danger:hover {
+        background: #fef2f2;
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .err {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 0.8125rem;
+        white-space: pre-wrap;
+        font-family: ui-monospace, monospace;
+        display: none;
+        margin-bottom: 12px;
+      }
+      .err.visible {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>URL encode / decode</h1>
+      <p class="sub">
+        Each section has an independent encode block (left) and decode block (right).
+        Uses <code>encodeURIComponent</code> / <code>decodeURIComponent</code>.
+        All inputs are saved in <code>sessionStorage</code> for this tab.
+      </p>
+
+      <div class="toolbar-top">
+        <button type="button" id="addSectionBtn">Add section</button>
+      </div>
+
+      <div id="sectionsRoot"></div>
+    </div>
+
+    <script>
+      const LS_SECTIONS = "url-encode-decode.v1.sections";
+      const LS_ENCODE_IN_LEGACY = "url-encode-decode.v1.encodeIn";
+      const LS_DECODE_IN_LEGACY = "url-encode-decode.v1.decodeIn";
+
+      const sectionsRoot = document.getElementById("sectionsRoot");
+      const addSectionBtn = document.getElementById("addSectionBtn");
+
+      function showSectionErr(el, msg) {
+        el.textContent = msg;
+        el.classList.toggle("visible", Boolean(msg));
+      }
+
+      function copyText(text) {
+        if (!text) return;
+        try {
+          navigator.clipboard.writeText(text);
+        } catch (_) {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+        }
+      }
+
+      function runEncode(encodeIn, encodeOut, encodeErr) {
+        showSectionErr(encodeErr, "");
+        try {
+          encodeOut.value = encodeURIComponent(encodeIn.value);
+        } catch (e) {
+          encodeOut.value = "";
+          showSectionErr(encodeErr, (e && e.message) || String(e));
+        }
+      }
+
+      function runDecode(decodeIn, decodeOut, decodeErr) {
+        showSectionErr(decodeErr, "");
+        const raw = decodeIn.value;
+        if (raw === "") {
+          decodeOut.value = "";
+          return;
+        }
+        try {
+          decodeOut.value = decodeURIComponent(raw);
+        } catch (e) {
+          decodeOut.value = "";
+          showSectionErr(
+            decodeErr,
+            "Invalid percent-encoding: " + ((e && e.message) || e),
+          );
+        }
+      }
+
+      function readSectionsFromDom() {
+        return [...sectionsRoot.querySelectorAll(".section-row")].map((row) => ({
+          encodeIn: row.querySelector("[data-role=encode-in]").value,
+          decodeIn: row.querySelector("[data-role=decode-in]").value,
+        }));
+      }
+
+      function persistAll() {
+        try {
+          sessionStorage.setItem(
+            LS_SECTIONS,
+            JSON.stringify(readSectionsFromDom()),
+          );
+        } catch (_) {
+          /* storage unavailable */
+        }
+      }
+
+      function loadSectionsData() {
+        try {
+          const raw = sessionStorage.getItem(LS_SECTIONS);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return parsed.map((s) => ({
+                encodeIn: typeof s.encodeIn === "string" ? s.encodeIn : "",
+                decodeIn: typeof s.decodeIn === "string" ? s.decodeIn : "",
+              }));
+            }
+          }
+          const enc = sessionStorage.getItem(LS_ENCODE_IN_LEGACY);
+          const dec = sessionStorage.getItem(LS_DECODE_IN_LEGACY);
+          if (enc !== null || dec !== null) {
+            return [
+              {
+                encodeIn: enc !== null ? enc : "",
+                decodeIn: dec !== null ? dec : "",
+              },
+            ];
+          }
+        } catch (_) {
+          /* ignore */
+        }
+        return [{ encodeIn: "", decodeIn: "" }];
+      }
+
+      function updateSectionTitles() {
+        const rows = sectionsRoot.querySelectorAll(".section-row");
+        rows.forEach((row, i) => {
+          const title = row.querySelector("[data-role=section-title]");
+          if (title) title.textContent = `Section ${i + 1}`;
+          const removeBtn = row.querySelector("[data-role=remove-section]");
+          if (removeBtn) removeBtn.disabled = rows.length <= 1;
+        });
+      }
+
+      function createPanel(type, sectionIndex) {
+        const isEncode = type === "encode";
+        const panel = document.createElement("section");
+        panel.className = "panel";
+
+        const heading = document.createElement("h3");
+        heading.textContent = isEncode ? "Encode" : "Decode";
+        panel.appendChild(heading);
+
+        const hint = document.createElement("p");
+        hint.className = "hint";
+        hint.textContent = isEncode
+          ? "Plain text → percent-encoded."
+          : "Percent-encoded → plain text.";
+        panel.appendChild(hint);
+
+        const err = document.createElement("div");
+        err.className = "err";
+        err.setAttribute("role", "alert");
+        err.dataset.role = isEncode ? "encode-err" : "decode-err";
+        panel.appendChild(err);
+
+        const inLabel = document.createElement("label");
+        inLabel.textContent = isEncode ? "Plain text" : "Encoded";
+        panel.appendChild(inLabel);
+
+        const input = document.createElement("textarea");
+        input.spellcheck = false;
+        input.dataset.role = isEncode ? "encode-in" : "decode-in";
+        input.id = `${type}In-${sectionIndex}`;
+        inLabel.setAttribute("for", input.id);
+        input.placeholder = isEncode
+          ? "hello world?foo=1"
+          : "hello%20world%3Ffoo%3D1";
+        panel.appendChild(input);
+
+        const actions = document.createElement("div");
+        actions.className = "field-actions";
+
+        const runBtn = document.createElement("button");
+        runBtn.type = "button";
+        runBtn.textContent = isEncode ? "Encode" : "Decode";
+        runBtn.dataset.role = isEncode ? "encode-run" : "decode-run";
+        actions.appendChild(runBtn);
+
+        const copyInBtn = document.createElement("button");
+        copyInBtn.type = "button";
+        copyInBtn.className = "secondary";
+        copyInBtn.textContent = isEncode ? "Copy plain" : "Copy encoded";
+        copyInBtn.dataset.role = isEncode ? "encode-copy-in" : "decode-copy-in";
+        actions.appendChild(copyInBtn);
+
+        const copyOutBtn = document.createElement("button");
+        copyOutBtn.type = "button";
+        copyOutBtn.className = "secondary";
+        copyOutBtn.textContent = isEncode ? "Copy encoded" : "Copy plain";
+        copyOutBtn.dataset.role = isEncode ? "encode-copy-out" : "decode-copy-out";
+        actions.appendChild(copyOutBtn);
+
+        const clearBtn = document.createElement("button");
+        clearBtn.type = "button";
+        clearBtn.className = "secondary";
+        clearBtn.textContent = "Clear";
+        clearBtn.dataset.role = isEncode ? "encode-clear" : "decode-clear";
+        actions.appendChild(clearBtn);
+
+        panel.appendChild(actions);
+
+        const outLabel = document.createElement("label");
+        outLabel.textContent = isEncode ? "Encoded" : "Plain text";
+        panel.appendChild(outLabel);
+
+        const output = document.createElement("textarea");
+        output.className = "output";
+        output.readOnly = true;
+        output.spellcheck = false;
+        output.setAttribute("aria-readonly", "true");
+        output.dataset.role = isEncode ? "encode-out" : "decode-out";
+        output.id = `${type}Out-${sectionIndex}`;
+        outLabel.setAttribute("for", output.id);
+        panel.appendChild(output);
+
+        return panel;
+      }
+
+      function wireSection(row) {
+        const encodeIn = row.querySelector("[data-role=encode-in]");
+        const encodeOut = row.querySelector("[data-role=encode-out]");
+        const encodeErr = row.querySelector("[data-role=encode-err]");
+        const decodeIn = row.querySelector("[data-role=decode-in]");
+        const decodeOut = row.querySelector("[data-role=decode-out]");
+        const decodeErr = row.querySelector("[data-role=decode-err]");
+
+        encodeIn.addEventListener("input", () => {
+          runEncode(encodeIn, encodeOut, encodeErr);
+          persistAll();
+        });
+        decodeIn.addEventListener("input", () => {
+          runDecode(decodeIn, decodeOut, decodeErr);
+          persistAll();
+        });
+
+        row.querySelector("[data-role=encode-run]").addEventListener("click", () => {
+          runEncode(encodeIn, encodeOut, encodeErr);
+        });
+        row.querySelector("[data-role=decode-run]").addEventListener("click", () => {
+          runDecode(decodeIn, decodeOut, decodeErr);
+        });
+
+        row.querySelector("[data-role=encode-clear]").addEventListener("click", () => {
+          encodeIn.value = "";
+          encodeOut.value = "";
+          showSectionErr(encodeErr, "");
+          persistAll();
+        });
+        row.querySelector("[data-role=decode-clear]").addEventListener("click", () => {
+          decodeIn.value = "";
+          decodeOut.value = "";
+          showSectionErr(decodeErr, "");
+          persistAll();
+        });
+
+        row.querySelector("[data-role=encode-copy-in]").addEventListener("click", () => {
+          copyText(encodeIn.value);
+        });
+        row.querySelector("[data-role=encode-copy-out]").addEventListener("click", () => {
+          copyText(encodeOut.value);
+        });
+        row.querySelector("[data-role=decode-copy-in]").addEventListener("click", () => {
+          copyText(decodeIn.value);
+        });
+        row.querySelector("[data-role=decode-copy-out]").addEventListener("click", () => {
+          copyText(decodeOut.value);
+        });
+
+        row.querySelector("[data-role=remove-section]").addEventListener("click", () => {
+          row.remove();
+          updateSectionTitles();
+          persistAll();
+        });
+
+        runEncode(encodeIn, encodeOut, encodeErr);
+        runDecode(decodeIn, decodeOut, decodeErr);
+      }
+
+      function addSection(data, sectionIndex) {
+        const row = document.createElement("div");
+        row.className = "section-row";
+
+        const head = document.createElement("div");
+        head.className = "section-head";
+
+        const title = document.createElement("h2");
+        title.dataset.role = "section-title";
+        title.textContent = `Section ${sectionIndex + 1}`;
+        head.appendChild(title);
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "danger secondary";
+        removeBtn.dataset.role = "remove-section";
+        removeBtn.textContent = "Remove section";
+        head.appendChild(removeBtn);
+
+        row.appendChild(head);
+
+        const panels = document.createElement("div");
+        panels.className = "panels";
+        panels.appendChild(createPanel("encode", sectionIndex));
+        panels.appendChild(createPanel("decode", sectionIndex));
+        row.appendChild(panels);
+
+        sectionsRoot.appendChild(row);
+
+        if (data) {
+          row.querySelector("[data-role=encode-in]").value = data.encodeIn || "";
+          row.querySelector("[data-role=decode-in]").value = data.decodeIn || "";
+        }
+
+        wireSection(row);
+        updateSectionTitles();
+      }
+
+      addSectionBtn.addEventListener("click", () => {
+        addSection({ encodeIn: "", decodeIn: "" }, sectionsRoot.children.length);
+        persistAll();
+      });
+
+      const saved = loadSectionsData();
+      saved.forEach((data, i) => addSection(data, i));
+      persistAll();
+    </script>
+  </body>
+</html>
